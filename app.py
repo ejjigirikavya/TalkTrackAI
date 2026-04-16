@@ -113,7 +113,7 @@ def generate_ai_feedback(acc, fillers, wpm, pauses):
 
 @app.route('/')
 def home():
-    return render_template('login.html')
+    return render_template('index.html')
 
 @app.route('/signup')
 def signup():
@@ -138,8 +138,8 @@ def register():
 
     return redirect('/')
 
-@app.route('/login', methods=['POST'])
-def login():
+@app.route('/index', methods=['POST'])
+def index():
     username = request.form['username']
     password = request.form['password']
 
@@ -154,7 +154,7 @@ def login():
     if user:
         return redirect('/dashboard')
     else:
-        return render_template('login.html', error="Invalid Credentials")
+        return render_template('index.html', error="Invalid Credentials")
 
 @app.route('/dashboard')
 def dashboard():
