@@ -1,15 +1,11 @@
 from flask import Flask, render_template, request, redirect
 import sqlite3
 import os
-import speech_recognition as sr
 from pptx import Presentation
 import difflib
 import time
 
 app = Flask(__name__)
-
-# ---------- GLOBAL ----------
-recording = False
 
 # ---------- DATABASE ----------
 def init_db():
@@ -27,10 +23,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# ---------- SPEECH SETUP ----------
-recognizer = sr.Recognizer()
-
-
+# ---------- TEXT ANALYSIS ----------
 filler_words = ["um", "uh", "like", "you know", "basically", "and", "that"]
 
 # ---------- PPT TEXT ----------
@@ -44,25 +37,6 @@ def extract_ppt_text(file):
                 text += shape.text + " "
 
     return text
-
-# ---------- CONTROLLED SPEECH ----------
-def get_speech_controlled():
-    global recording
-    full_text = ""
-    mic = sr.Microphone()
-
-    with mic as source:
-        recognizer.adjust_for_ambient_noise(source)
-
-        while recording:
-            try:
-                audio = recognizer.listen(source, timeout=3)
-                text = recognizer.recognize_google(audio)
-                full_text += " " + text
-            except:
-                pass
-
-    return full_text
 
 # ---------- ANALYSIS ----------
 def calculate_accuracy(ppt_text, spoken_text):
@@ -138,8 +112,8 @@ def register():
 
     return redirect('/')
 
-@app.route('/index', methods=['POST'])
-def index():
+@app.route('/login', methods=['POST'])
+def login():
     username = request.form['username']
     password = request.form['password']
 
@@ -166,34 +140,22 @@ def upload():
     file.save("uploaded.pptx")
     return redirect('/dashboard')
 
-# ---------- START ----------
+# ---------- START (UPDATED FOR RENDER + LOCAL) ----------
 @app.route('/start', methods=['POST'])
 def start():
-    global recording
-    recording = True
-
     ppt_text = extract_ppt_text("uploaded.pptx")
 
-    start_time = time.time()
-    spoken_text = get_speech_controlled()
-    duration = time.time() - start_time
+    # ✅ Get speech from frontend (browser mic)
+    spoken_text = request.form.get("speech", "")
+    duration = 60
 
-    # 🚨 No speech detection
     if len(spoken_text.strip()) == 0:
         return render_template(
             'dashboard.html',
-            error="No speech detected! Please speak during presentation.",
+            error="No speech detected!",
             done=False
         )
 
-    if len(spoken_text.split()) < 5:
-        return render_template(
-            'dashboard.html',
-            error="Too little speech detected. Please speak more clearly.",
-            done=False
-        )
-
-    # ---------- ANALYSIS ----------
     accuracy = calculate_accuracy(ppt_text, spoken_text)
     fillers, wpm, pauses = analyze_speech(spoken_text, duration)
     feedback = generate_ai_feedback(accuracy, fillers, wpm, pauses)
@@ -209,15 +171,7 @@ def start():
         done=True
     )
 
-# ---------- STOP ----------
-@app.route('/stop', methods=['POST'])
-def stop():
-    global recording
-    recording = False
-    return "Stopped"
-
 # ---------- RUN ----------
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
-    use_reloader=(False)
+    app.run(debug=True, use_reloader=False)
