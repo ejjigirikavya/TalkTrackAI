@@ -2,7 +2,6 @@
 <html>
 <head>
 <title>Dashboard</title>
-
 <style>
 body {
     margin: 0;
@@ -11,26 +10,21 @@ body {
     color: white;
     text-align: center;
 }
-
 header {
     background: #020617;
     padding: 15px;
     font-size: 20px;
 }
-
 .container {
     margin-top: 40px;
 }
-
 .card {
     background: rgba(255,255,255,0.05);
-    backdrop-filter: blur(12px);
     padding: 25px;
     border-radius: 15px;
-    width: 400px;
+    width: 420px;
     margin: auto;
 }
-
 button {
     padding: 10px 20px;
     margin: 10px;
@@ -39,32 +33,18 @@ button {
     background: #38bdf8;
     cursor: pointer;
 }
-
-button:hover {
-    background:#0ea5e9;
-}
-
 .stop-btn {
-    background: #ef4444;
+    background: red;
 }
-
-.stop-btn:hover {
-    background: #dc2626;
-}
-
-input {
-    padding: 10px;
+textarea {
+    width: 90%;
+    height: 80px;
+    margin-top: 10px;
     border-radius: 8px;
 }
-
 .result {
     margin-top: 20px;
     text-align: left;
-}
-
-.error {
-    color: red;
-    margin-top: 15px;
 }
 </style>
 </head>
@@ -76,30 +56,29 @@ input {
 <div class="container">
 <div class="card">
 
-<!-- ✅ Upload PPT -->
 <form action="/upload" method="POST" enctype="multipart/form-data">
     <input type="file" name="ppt" required>
+    <br><br>
     <button>Upload PPT</button>
 </form>
 
-<!-- ✅ Start Button -->
-<form action="/start" method="POST">
-    <button>▶ Start Presentation</button>
+<textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
+
+<br>
+
+<button onclick="startSpeech()">▶ Start Presentation</button>
+<button class="stop-btn" onclick="stopSpeech()">■ Stop</button>
+
+<form action="/analyze" method="POST" onsubmit="setText()">
+    <input type="hidden" name="text" id="hiddenText">
+    <button type="submit">Analyze</button>
 </form>
 
-<!-- ✅ Stop Button -->
-<button class="stop-btn" onclick="stopRecording()">⏹ Stop</button>
-
-<!-- ✅ Error Message -->
-{% if error %}
-<p class="error">{{ error }}</p>
-{% endif %}
-
-<!-- ✅ Results Section -->
 {% if done %}
 <div class="result">
 <hr>
-<h3>📊 Results</h3>
+
+<h2>📊 Results</h2>
 
 <p><b>Spoken:</b> {{ spoken_text }}</p>
 <p>Accuracy: {{ accuracy }}%</p>
@@ -113,19 +92,39 @@ input {
 <li>{{ f }}</li>
 {% endfor %}
 </ul>
+
 </div>
 {% endif %}
 
 </div>
 </div>
 
-<!-- ✅ Stop Script -->
 <script>
-function stopRecording() {
-    fetch('/stop', { method: 'POST' })
-    .then(() => {
-        alert("⏹ Recording stopped! Please wait for results...");
-    });
+let recognition;
+let finalTranscript = "";
+
+function startSpeech() {
+    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = true;
+
+    recognition.onresult = function(event) {
+        finalTranscript = "";
+        for (let i = 0; i < event.results.length; i++) {
+            finalTranscript += event.results[i][0].transcript + " ";
+        }
+        document.getElementById("speechText").value = finalTranscript;
+    };
+
+    recognition.start();
+}
+
+function stopSpeech() {
+    recognition.stop();
+}
+
+function setText() {
+    document.getElementById("hiddenText").value =
+        document.getElementById("speechText").value;
 }
 </script>
 
