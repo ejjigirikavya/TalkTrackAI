@@ -1,5 +1,3 @@
 Flask
-gunicorn
-SpeechRecognition
 python-pptx
-pyaudio
+gunicorn
