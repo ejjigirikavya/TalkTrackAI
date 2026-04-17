@@ -34,7 +34,7 @@ button{
 
 <h2>TalkTrack Dashboard</h2>
 
-<!-- Upload PPT -->
+<!-- Upload -->
 <form action="/upload" method="POST" enctype="multipart/form-data">
 <input type="file" name="ppt">
 <button type="submit">Upload PPT</button>
@@ -42,7 +42,6 @@ button{
 
 <br>
 
-<!-- Speech box -->
 <textarea id="speechText" placeholder="Speak here..."></textarea>
 
 <br>
@@ -50,7 +49,6 @@ button{
 <button onclick="startSpeech()">Start</button>
 <button onclick="stopSpeech()">Stop</button>
 
-<!-- Hidden form -->
 <form id="form" action="/analyze" method="POST">
 <input type="hidden" name="text" id="hiddenText">
 </form>
@@ -61,7 +59,6 @@ button{
 
 {% if spoken %}
 <h3>Results</h3>
-
 <p><b>Spoken:</b> {{spoken}}</p>
 <p><b>Accuracy:</b> {{accuracy}}%</p>
 <p><b>Filler Words:</b> {{fillers}}</p>
@@ -74,7 +71,6 @@ button{
 <li>{{f}}</li>
 {% endfor %}
 </ul>
-
 {% endif %}
 
 </div>
@@ -110,7 +106,9 @@ function startSpeech(){
 }
 
 function stopSpeech(){
-    recognition.stop();
+    if(recognition){
+        recognition.stop();
+    }
 
     setTimeout(()=>{
         let text = document.getElementById("speechText").value;
@@ -121,9 +119,8 @@ function stopSpeech(){
         }
 
         document.getElementById("hiddenText").value = text;
-
-        document.getElementById("form").submit();   // ✅ FIXED
-    }, 1000);
+        document.getElementById("form").submit();
+    }, 800);
 }
 </script>
 
