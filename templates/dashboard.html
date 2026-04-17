@@ -37,7 +37,6 @@ button {
 .upload { background:#4fc3f7; }
 .start { background:#29b6f6; }
 .stop { background:#ef5350; color:white; }
-.analyze { background:#4fc3f7; width:100%; }
 
 textarea {
     width:100%;
@@ -58,11 +57,13 @@ hr { margin:20px 0; }
 <div class="container">
 <div class="card">
 
+<!-- Upload -->
 <form action="/upload" method="POST" enctype="multipart/form-data">
 <input type="file" name="ppt" required><br>
 <button class="upload">Upload PPT</button>
 </form>
 
+<!-- Speech -->
 <textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
 
 <br>
@@ -70,9 +71,9 @@ hr { margin:20px 0; }
 <button class="start" onclick="startSpeech()">▶ Start Presentation</button>
 <button class="stop" onclick="stopSpeech()">■ Stop</button>
 
-<form action="/analyze" method="POST" onsubmit="setText()">
+<!-- 🔥 Hidden Analyze Form -->
+<form id="analyzeForm" action="/analyze" method="POST">
 <input type="hidden" name="text" id="hiddenText">
-<button class="analyze">Analyze</button>
 </form>
 
 <hr>
@@ -111,6 +112,7 @@ hr { margin:20px 0; }
 <script>
 let recognition;
 
+// START
 function startSpeech() {
     recognition = new webkitSpeechRecognition();
     recognition.continuous = true;
@@ -126,13 +128,17 @@ function startSpeech() {
     recognition.start();
 }
 
+// 🔥 STOP + AUTO ANALYZE
 function stopSpeech() {
-    recognition.stop();
-}
+    if (recognition) recognition.stop();
 
-function setText() {
-    document.getElementById("hiddenText").value =
-        document.getElementById("speechText").value;
+    // wait a bit for last speech chunk
+    setTimeout(() => {
+        document.getElementById("hiddenText").value =
+            document.getElementById("speechText").value;
+
+        document.getElementById("analyzeForm").submit();
+    }, 500);
 }
 </script>
 
