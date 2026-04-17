@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from pptx import Presentation
 import difflib
 import os
+ppt_txt=""
 
 app = Flask(__name__)
 
@@ -44,30 +45,31 @@ def dashboard():
 # ---------- UPLOAD ----------
 @app.route('/upload', methods=['POST'])
 def upload():
+    global ppt_text
+
     file = request.files.get('ppt')
 
     if not file:
         return render_template('dashboard.html', error="No file selected")
 
-    file.save("uploaded.pptx")   # ✅ SAVE FILE
+    # ✅ DIRECTLY EXTRACT TEXT (NO SAVE)
+    ppt_text = extract_ppt_text(file)
 
     return redirect(url_for('dashboard'))
-
 
 # ---------- ANALYZE ----------
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    global ppt_text
 
     spoken = request.form.get('text', '').strip().lower()
 
     if spoken == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # ✅ CHECK FILE EXISTS
-    if not os.path.exists("uploaded.pptx"):
+    # ❌ REMOVE os.path.exists
+    if ppt_text.strip() == "":
         return render_template('dashboard.html', error="Upload PPT first")
-
-    ppt_text = extract_ppt_text("uploaded.pptx")
 
     # ---------- ACCURACY ----------
     accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
