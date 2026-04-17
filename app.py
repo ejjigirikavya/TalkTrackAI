@@ -1,129 +1,96 @@
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, url_for
 from pptx import Presentation
 import difflib
 
 app = Flask(__name__)
-app.secret_key = "secret123"
+
+ppt_text = ""   # simple global (works reliably)
+
 
 # ---------- EXTRACT PPT ----------
 def extract_ppt_text(file):
     prs = Presentation(file)
     text = ""
+
     for slide in prs.slides:
         for shape in slide.shapes:
             if hasattr(shape, "text"):
                 text += shape.text + " "
+
     return text.lower()
-
-# ---------- ACCURACY ----------
-def calculate_accuracy(ppt_text, spoken_text):
-    return round(difflib.SequenceMatcher(None, ppt_text, spoken_text).ratio() * 100, 2)
-
-# ---------- FILLERS ----------
-def count_fillers(text):
-    fillers = ["um", "uh", "like", "you know", "basically", "and"]
-    return sum(text.count(word) for word in fillers)
-
-# ---------- PAUSES ----------
-def count_pauses(text):
-    return text.count("...")
-
-# ---------- FEEDBACK ----------
-def generate_feedback(acc, fillers, wpm, pauses):
-    feedback = []
-
-    if acc < 30:
-        feedback.append("Follow PPT more closely.")
-    else:
-        feedback.append("Good clarity.")
-
-    if fillers > 3:
-        feedback.append("Too many filler words.")
-    else:
-        feedback.append("Good flow.")
-
-    if wpm < 90:
-        feedback.append("Speak faster.")
-    elif wpm > 160:
-        feedback.append("Slow down.")
-
-    if pauses > 3:
-        feedback.append("Too many pauses.")
-
-    return feedback
 
 
 # ---------- ROUTES ----------
 
-# LOGIN PAGE (index.html)
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        return redirect('/dashboard')
+        return redirect(url_for('dashboard'))
     return render_template('index.html')
 
 
-# SIGNUP
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        return redirect('/')
+        return redirect(url_for('login'))
     return render_template('signup.html')
 
 
-# DASHBOARD
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
 
 
-# UPLOAD PPT
 @app.route('/upload', methods=['POST'])
 def upload():
+    global ppt_text
+
     file = request.files.get('ppt')
+    if file:
+        ppt_text = extract_ppt_text(file)
 
-    if not file:
-        return render_template('dashboard.html', error="No file selected")
-
-    ppt_text = extract_ppt_text(file)
-
-    # store in session (IMPORTANT)
-    session['ppt_text'] = ppt_text
-
-    return redirect('/dashboard')
+    return redirect(url_for('dashboard'))
 
 
-# ANALYZE (STOP BUTTON CALLS THIS)
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    ppt_text = session.get('ppt_text', '')
-    spoken_text = request.form.get('text', '').lower()
+    global ppt_text
 
-    if ppt_text.strip() == "":
-        return render_template('dashboard.html', error="Upload PPT first")
+    spoken = request.form.get('text', '').lower()
 
-    if spoken_text.strip() == "":
+    if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    accuracy = calculate_accuracy(ppt_text, spoken_text)
-    fillers = count_fillers(spoken_text)
-    pauses = count_pauses(spoken_text)
+    # 🔥 IMPORTANT: no blocking error
+    if ppt_text:
+        accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
+    else:
+        accuracy = 0
 
-    words = len(spoken_text.split())
-    wpm = round(words / 1.5, 2) if words else 0
+    fillers = sum(spoken.count(w) for w in ["um", "uh", "like"])
+    pauses = spoken.count("...")
+    wpm = len(spoken.split())
 
-    feedback = generate_feedback(accuracy, fillers, wpm, pauses)
+    feedback = []
+    if accuracy < 40:
+        feedback.append("Follow PPT more closely")
+    if fillers > 3:
+        feedback.append("Reduce filler words")
+    if wpm < 70:
+        feedback.append("Speak faster")
+    if pauses > 3:
+        feedback.append("Too many pauses")
 
     return render_template(
         'dashboard.html',
-        spoken=spoken_text,
-        accuracy=accuracy,
+        spoken=spoken,
+        accuracy=round(accuracy, 2),
         fillers=fillers,
-        wpm=wpm,
         pauses=pauses,
+        wpm=wpm,
         feedback=feedback
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
