@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 from pptx import Presentation
 import difflib
+import os
 
 app = Flask(__name__)
 
@@ -60,45 +61,62 @@ def upload():
 def analyze():
     global ppt_text
 
-    spoken = request.form.get('text', '').lower()
+    spoken = request.form.get('text', '').strip().lower()
 
-    if spoken.strip() == "":
+    if spoken == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # Accuracy
-    if ppt_text:
-        accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
+    # ---------- ACCURACY (IMPROVED) ----------
+    if ppt_text.strip() != "":
+        matcher = difflib.SequenceMatcher(None, spoken, ppt_text)
+        accuracy = matcher.ratio() * 100
     else:
-        accuracy = 0
+        return render_template('dashboard.html', error="Upload PPT first")
 
-    # Filler words
-    filler_list = ["um", "uh", "like", "you know", "basically"]
-    fillers = sum(spoken.count(word) for word in filler_list)
+    # ---------- FILLER WORDS (IMPROVED) ----------
+    filler_words = ["um", "uh", "like", "you know", "basically"]
+    words = spoken.split()
 
-    # Pauses
-    pauses = spoken.count("...")
+    fillers = sum(1 for word in words if word in filler_words)
 
-    # Speed
-    wpm = len(spoken.split())
+    # ---------- PAUSES (BETTER LOGIC) ----------
+    pauses = (
+        spoken.count(",") +      # natural pauses
+        spoken.count("...") +    # long pauses
+        spoken.count("  ")       # double space hesitation
+    )
 
-    # Feedback
+    # ---------- SPEED (REALISTIC) ----------
+    word_count = len(words)
+    duration = max(word_count * 0.5, 1)   # assume 0.5 sec per word
+    wpm = (word_count / duration) * 60
+
+    # ---------- AI FEEDBACK ----------
     feedback = []
 
     if accuracy < 40:
         feedback.append("Follow PPT more closely")
+    elif accuracy < 75:
+        feedback.append("Good attempt, improve alignment")
     else:
-        feedback.append("Good alignment")
+        feedback.append("Excellent alignment with PPT")
 
-    if fillers > 3:
+    if fillers == 0:
+        feedback.append("Great! No filler words used")
+    elif fillers > 3:
         feedback.append("Reduce filler words")
+
+    if pauses == 0:
+        feedback.append("Smooth speech delivery")
+    elif pauses > 3:
+        feedback.append("Too many pauses")
 
     if wpm < 70:
         feedback.append("Speak faster")
     elif wpm > 150:
         feedback.append("Slow down")
-
-    if pauses > 3:
-        feedback.append("Too many pauses")
+    else:
+        feedback.append("Good speaking speed")
 
     return render_template(
         'dashboard.html',
@@ -106,10 +124,9 @@ def analyze():
         accuracy=round(accuracy, 2),
         fillers=fillers,
         pauses=pauses,
-        wpm=wpm,
+        wpm=round(wpm, 2),
         feedback=feedback
     )
 
-
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000)
