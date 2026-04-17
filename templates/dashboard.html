@@ -1,95 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-<style>
-body {
-    font-family: Arial;
-    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-    color:white;
-    text-align:center;
-}
-
-.card {
-    background:rgba(255,255,255,0.1);
-    padding:30px;
-    border-radius:20px;
-    width:400px;
-    margin:auto;
-    margin-top:50px;
-}
-
-textarea {
-    width:100%;
-    height:100px;
-    margin-top:10px;
-}
-
-button {
-    margin:10px;
-    padding:10px;
-    border:none;
-    border-radius:8px;
-}
-</style>
+    <title>Dashboard</title>
 </head>
 
-<body>
+<body style="text-align:center; background:#0f172a; color:white; padding:40px;">
 
-<h2>🎤 TalkTrack Dashboard</h2>
+<h2>TalkTrack Dashboard</h2>
 
-<div class="card">
-
+<!-- Upload PPT -->
 <form action="/upload" method="POST" enctype="multipart/form-data">
-<input type="file" name="ppt" required><br>
-<button>Upload PPT</button>
+    <input type="file" name="ppt" required>
+    <button type="submit">Upload PPT</button>
 </form>
 
-<textarea id="speechText"></textarea>
-
 <br>
+
+<!-- Speech box -->
+<textarea id="speechText" rows="5" cols="50" placeholder="Speak here..."></textarea>
+
+<br><br>
 
 <button onclick="startSpeech()">Start</button>
 <button onclick="stopSpeech()">Stop</button>
 
+<!-- Hidden form -->
+<form id="analyzeForm" action="/analyze" method="POST">
+    <input type="hidden" name="text" id="hiddenText">
+</form>
+
+<hr>
+
+<!-- ERROR -->
 {% if error %}
-<p style="color:red">{{error}}</p>
+<p style="color:red;">{{ error }}</p>
 {% endif %}
 
+<!-- RESULTS -->
 {% if spoken %}
 <h3>Results</h3>
-<p>Accuracy: {{accuracy}}%</p>
-<p>Fillers: {{fillers}}</p>
-<p>Speed: {{wpm}}</p>
-<p>Pauses: {{pauses}}</p>
+<p><b>Spoken:</b> {{ spoken }}</p>
+<p><b>Accuracy:</b> {{ accuracy }}%</p>
+<p><b>Fillers:</b> {{ fillers }}</p>
+<p><b>Speed:</b> {{ wpm }} WPM</p>
+<p><b>Pauses:</b> {{ pauses }}</p>
 
+<h3>AI Feedback</h3>
 <ul>
-{% for f in feedback %}
-<li>{{f}}</li>
-{% endfor %}
+    {% for f in feedback %}
+    <li>{{ f }}</li>
+    {% endfor %}
 </ul>
 {% endif %}
 
-</div>
-
 <script>
 let recognition;
-let finalText = "";
 
 function startSpeech() {
-    finalText = "";
-    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-
+    recognition = new webkitSpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = true;
 
     recognition.onresult = function(event) {
-        let interim = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            let t = event.results[i][0].transcript;
-            if (event.results[i].isFinal) finalText += t + " ";
-            else interim += t;
+        let text = "";
+        for (let i = 0; i < event.results.length; i++) {
+            text += event.results[i][0].transcript;
         }
-        document.getElementById("speechText").value = finalText + interim;
+        document.getElementById("speechText").value = text;
     };
 
     recognition.start();
@@ -98,21 +74,10 @@ function startSpeech() {
 function stopSpeech() {
     recognition.stop();
 
-    setTimeout(() => {
-        let text = document.getElementById("speechText").value;
+    document.getElementById("hiddenText").value =
+        document.getElementById("speechText").value;
 
-        fetch("/analyze", {
-            method: "POST",
-            headers: {"Content-Type": "application/x-www-form-urlencoded"},
-            body: "text=" + encodeURIComponent(text)
-        })
-        .then(r => r.text())
-        .then(html => {
-            document.open();
-            document.write(html);
-            document.close();
-        });
-    }, 500);
+    document.getElementById("analyzeForm").submit();
 }
 </script>
 
