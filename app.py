@@ -19,13 +19,23 @@ def extract_ppt_text(file):
     return text.lower()
 
 
-# ---------- ROUTES ----------
-
-@app.route('/')
+# ---------- LOGIN ----------
+@app.route('/', methods=['GET', 'POST'])
 def login():
+    if request.method == 'POST':
+        return redirect(url_for('dashboard'))
     return render_template('index.html')
 
 
+# ---------- SIGNUP ----------
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        return redirect(url_for('login'))
+    return render_template('signup.html')
+
+
+# ---------- DASHBOARD ----------
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
@@ -111,6 +121,12 @@ def analyze():
         wpm=round(wpm, 2),
         feedback=feedback
     )
+
+
+# ---------- SAFETY (PREVENT 405 ERROR) ----------
+@app.route('/analyze', methods=['GET'])
+def analyze_get():
+    return redirect(url_for('dashboard'))
 
 
 # ---------- RUN ----------
