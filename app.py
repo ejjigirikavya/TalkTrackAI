@@ -127,6 +127,5 @@ def analyze():
         wpm=round(wpm, 2),
         feedback=feedback
     )
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
