@@ -5,140 +5,126 @@
 
 <style>
 body {
-    margin:0;
+    margin: 0;
     font-family: Arial;
-    background: linear-gradient(to right,#0f2027,#203a43,#2c5364);
-    color:white;
+    background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+    color: white;
+    text-align: center;
 }
 
 .container {
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
+    margin-top: 50px;
 }
 
 .card {
-    background:rgba(255,255,255,0.08);
-    padding:30px;
-    border-radius:15px;
-    width:400px;
-    text-align:center;
+    background: rgba(255,255,255,0.1);
+    padding: 30px;
+    border-radius: 15px;
+    width: 400px;
+    margin: auto;
 }
 
 button {
-    padding:10px;
-    margin:5px;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    margin: 10px;
+    cursor: pointer;
 }
 
-.upload { background:#4fc3f7; }
-.start { background:#29b6f6; }
-.stop { background:#ef5350; color:white; }
+.upload-btn { background: #00c6ff; color: black; }
+.start-btn { background: #00c6ff; color: black; }
+.stop-btn { background: red; color: white; }
 
 textarea {
-    width:100%;
-    height:80px;
-    border-radius:8px;
-    padding:10px;
+    width: 100%;
+    height: 120px;
+    margin-top: 10px;
+    border-radius: 10px;
+    padding: 10px;
 }
-
-hr { margin:20px 0; }
-
-.results { text-align:left; }
 </style>
 
 </head>
 
 <body>
 
+<h2>🎤 TalkTrack Dashboard</h2>
+
 <div class="container">
 <div class="card">
 
 <!-- Upload -->
 <form action="/upload" method="POST" enctype="multipart/form-data">
-<input type="file" name="ppt" required><br>
-<button class="upload">Upload PPT</button>
+    <input type="file" name="ppt" required>
+    <br><br>
+    <button class="upload-btn">Upload PPT</button>
 </form>
+
+<br>
 
 <!-- Speech -->
 <textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
 
 <br>
 
-<button class="start" onclick="startSpeech()">▶ Start Presentation</button>
-<button class="stop" onclick="stopSpeech()">■ Stop</button>
+<button class="start-btn" onclick="startSpeech()">▶ Start</button>
 
-<!-- 🔥 Hidden Analyze Form -->
-<form id="analyzeForm" action="/analyze" method="POST">
-<input type="hidden" name="text" id="hiddenText">
+<!-- STOP = ANALYZE -->
+<form action="/analyze" method="POST" onsubmit="setText()">
+    <input type="hidden" name="text" id="hiddenText">
+    <button class="stop-btn">■ Stop</button>
 </form>
 
 <hr>
 
-{% if message %}
-<p style="color:lightgreen">{{ message }}</p>
+{% if error %}
+<p style="color:red;">{{error}}</p>
 {% endif %}
 
-{% if error %}
-<p style="color:red">{{ error }}</p>
+{% if message %}
+<p style="color:lightgreen;">{{message}}</p>
 {% endif %}
 
 {% if done %}
-<div class="results">
 <h3>📊 Results</h3>
 
-<p><b>Spoken:</b> {{ spoken }}</p>
-<p><b>Accuracy:</b> {{ accuracy }}%</p>
-<p><b>Fillers:</b> {{ fillers }}</p>
-<p><b>Speed:</b> {{ wpm }} WPM</p>
-<p><b>Pauses:</b> {{ pauses }}</p>
+<p><b>Spoken:</b> {{spoken}}</p>
+<p>Accuracy: {{accuracy}}%</p>
+<p>Fillers: {{fillers}}</p>
+<p>Speed: {{wpm}} WPM</p>
+<p>Pauses: {{pauses}}</p>
 
-<h4>🧠 AI Feedback</h4>
+<h3>🧠 AI Feedback</h3>
 <ul>
 {% for f in feedback %}
-<li>{{ f }}</li>
+<li>{{f}}</li>
 {% endfor %}
 </ul>
-
-</div>
 {% endif %}
 
 </div>
 </div>
 
 <script>
-let recognition;
+function setText() {
+    document.getElementById("hiddenText").value =
+        document.getElementById("speechText").value;
+}
 
-// START
 function startSpeech() {
-    recognition = new webkitSpeechRecognition();
+    const recognition = new webkitSpeechRecognition();
     recognition.continuous = true;
 
     recognition.onresult = function(event) {
-        let text="";
-        for(let i=event.resultIndex;i<event.results.length;i++){
-            text += event.results[i][0].transcript;
+        let text = "";
+        for (let i = 0; i < event.results.length; i++) {
+            text += event.results[i][0].transcript + " ";
         }
         document.getElementById("speechText").value = text;
     };
 
     recognition.start();
-}
-
-// 🔥 STOP + AUTO ANALYZE
-function stopSpeech() {
-    if (recognition) recognition.stop();
-
-    // wait a bit for last speech chunk
-    setTimeout(() => {
-        document.getElementById("hiddenText").value =
-            document.getElementById("speechText").value;
-
-        document.getElementById("analyzeForm").submit();
-    }, 500);
 }
 </script>
 
