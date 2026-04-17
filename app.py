@@ -66,55 +66,43 @@ def analyze():
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    if ppt_text.strip() == "":
-        return render_template('dashboard.html', error="Upload PPT first")
-
     # ---------- ACCURACY (IMPROVED) ----------
-    spoken_words = re.findall(r'\b\w+\b', spoken)
-    ppt_words = re.findall(r'\b\w+\b', ppt_text)
+spoken_words = re.findall(r'\b\w+\b', spoken)
+ppt_words = re.findall(r'\b\w+\b', ppt_text)
 
-    if spoken_words:
-        match_count = sum(1 for word in spoken_words if word in ppt_words)
-        accuracy = (match_count / len(spoken_words)) * 100
-    else:
-        accuracy = 0
+if spoken_words:
+    match_count = sum(1 for word in spoken_words if word in ppt_words)
+    accuracy = (match_count / len(spoken_words)) * 100
+else:
+    accuracy = 0
 
-    # ---------- FILLERS (IMPROVED) ----------
-    filler_list = ["um", "uh", "like", "basically", "actually", "so"]
-    fillers = sum(1 for word in spoken_words if word in filler_list)
+# ---------- FILLERS (IMPROVED) ----------
+filler_list = ["um", "uh", "like", "basically", "actually", "so"]
+fillers = sum(1 for word in spoken_words if word in filler_list)
 
-    # ---------- PAUSES (ESTIMATED) ----------
-    pauses = len(spoken_words) // 8
+# ---------- PAUSES (ESTIMATED) ----------
+pauses = len(spoken_words) // 8
+    # Speed
+    wpm = len(spoken.split())
 
-    # ---------- SPEED ----------
-    wpm = len(spoken_words)
-
-    # ---------- FEEDBACK ----------
+    # Feedback
     feedback = []
 
     if accuracy < 40:
         feedback.append("Follow PPT more closely")
-    elif accuracy < 75:
-        feedback.append("Good attempt, improve alignment")
     else:
-        feedback.append("Excellent alignment")
+        feedback.append("Good alignment")
 
     if fillers > 3:
         feedback.append("Reduce filler words")
-    else:
-        feedback.append("Good clarity")
-
-    if pauses > 5:
-        feedback.append("Too many pauses")
-    else:
-        feedback.append("Smooth delivery")
 
     if wpm < 70:
         feedback.append("Speak faster")
     elif wpm > 150:
         feedback.append("Slow down")
-    else:
-        feedback.append("Good speaking speed")
+
+    if pauses > 3:
+        feedback.append("Too many pauses")
 
     return render_template(
         'dashboard.html',
