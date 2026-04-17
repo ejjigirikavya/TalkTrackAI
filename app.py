@@ -5,11 +5,7 @@ import os
 
 app = Flask(__name__)
 
-# GLOBAL STORAGE (IMPORTANT FIX)
-ppt_text_global = ""
-
-
-# ----------- EXTRACT PPT TEXT -----------
+# ---------------- PPT TEXT ----------------
 def extract_ppt_text(file):
     prs = Presentation(file)
     text = ""
@@ -20,33 +16,32 @@ def extract_ppt_text(file):
     return text.lower()
 
 
-# ----------- ACCURACY -----------
+# ---------------- ACCURACY ----------------
 def calculate_accuracy(ppt_text, spoken_text):
+    if not ppt_text:
+        return 0
     return round(difflib.SequenceMatcher(None, ppt_text, spoken_text).ratio() * 100, 2)
 
 
-# ----------- FILLERS -----------
+# ---------------- FILLERS ----------------
 def count_fillers(text):
     fillers = ["um", "uh", "like", "you know", "basically", "and"]
-    count = 0
-    for word in fillers:
-        count += text.lower().count(word)
-    return count
+    return sum(text.count(word) for word in fillers)
 
 
-# ----------- PAUSES -----------
+# ---------------- PAUSES ----------------
 def count_pauses(text):
     return text.count("...")
 
 
-# ----------- AI FEEDBACK -----------
+# ---------------- FEEDBACK ----------------
 def generate_ai_feedback(acc, fillers, wpm, pauses):
     feedback = []
 
     if acc < 40:
-        feedback.append("You need to follow PPT more closely.")
+        feedback.append("Follow PPT more closely.")
     else:
-        feedback.append("Good clarity.")
+        feedback.append("Good alignment with PPT.")
 
     if fillers > 3:
         feedback.append("Reduce filler words.")
@@ -68,18 +63,16 @@ def generate_ai_feedback(acc, fillers, wpm, pauses):
     return feedback
 
 
-# ----------- ROUTES -----------
+# ---------------- ROUTES ----------------
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST'])
 def login():
-    if request.method == 'POST':
-        return redirect('/dashboard')
-    return render_template('index.html')
+    return redirect('/dashboard')
 
 
 @app.route('/dashboard')
@@ -87,49 +80,44 @@ def dashboard():
     return render_template('dashboard.html', done=False)
 
 
-# ----------- UPLOAD PPT -----------
+# ---------------- UPLOAD ----------------
 @app.route('/upload', methods=['POST'])
 def upload():
-    global ppt_text_global
-
     file = request.files.get('ppt')
 
-    if not file:
-        return render_template('dashboard.html', error="No file uploaded")
+    if file:
+        file.save("uploaded.pptx")
+        return render_template("dashboard.html", message="PPT uploaded!", done=False)
 
-    file_path = "uploaded.pptx"
-    file.save(file_path)
-
-    ppt_text_global = extract_ppt_text(file_path)
-
-    return render_template('dashboard.html', message="PPT uploaded successfully!")
+    return render_template("dashboard.html", error="No file selected", done=False)
 
 
-# ----------- ANALYZE (TRIGGERED BY STOP BUTTON) -----------
+# ---------------- ANALYZE (STOP BUTTON TRIGGERS THIS) ----------------
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    global ppt_text_global
-
-    if not ppt_text_global:
-        return render_template('dashboard.html', error="Upload PPT first")
-
     spoken_text = request.form.get('text', '').lower()
 
     if not spoken_text.strip():
-        return render_template('dashboard.html', error="No speech detected")
+        return render_template('dashboard.html', error="No speech detected", done=False)
 
-    acc = calculate_accuracy(ppt_text_global, spoken_text)
+    # ✅ NO BLOCKING (IMPORTANT FIX)
+    if os.path.exists("uploaded.pptx"):
+        ppt_text = extract_ppt_text("uploaded.pptx")
+        accuracy = calculate_accuracy(ppt_text, spoken_text)
+    else:
+        accuracy = 0  # Still allow results
+
     fillers = count_fillers(spoken_text)
     pauses = count_pauses(spoken_text)
     wpm = len(spoken_text.split())
 
-    feedback = generate_ai_feedback(acc, fillers, wpm, pauses)
+    feedback = generate_ai_feedback(accuracy, fillers, wpm, pauses)
 
     return render_template(
         'dashboard.html',
         done=True,
         spoken=spoken_text,
-        accuracy=acc,
+        accuracy=accuracy,
         fillers=fillers,
         pauses=pauses,
         wpm=wpm,
