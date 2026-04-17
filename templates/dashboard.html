@@ -1,164 +1,180 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard</title>
+from flask import Flask, render_template, request, redirect
+from pptx import Presentation
+import difflib
+import os
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: white;
-            text-align: center;
-        }
+app = Flask(__name__)
 
-        header {
-            background: #020617;
-            padding: 15px;
-            font-size: 22px;
-        }
+UPLOAD_PATH = "uploaded.pptx"
 
-        .container {
-            margin-top: 40px;
-        }
+# ---------------- PPT TEXT ----------------
+def extract_ppt_text(file):
+    prs = Presentation(file)
+    text = ""
 
-        .card {
-            background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(12px);
-            padding: 25px;
-            border-radius: 15px;
-            width: 420px;
-            margin: auto;
-        }
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if hasattr(shape, "text"):
+                text += shape.text + " "
 
-        textarea {
-            width: 90%;
-            height: 80px;
-            margin-top: 10px;
-            border-radius: 10px;
-            padding: 10px;
-        }
+    return text
 
-        button {
-            padding: 10px 20px;
-            margin: 10px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-        }
 
-        .start-btn {
-            background: #38bdf8;
-        }
+# ---------------- CLEAN TEXT ----------------
+def clean_text(text):
+    return " ".join(text.lower().split())
 
-        .stop-btn {
-            background: #ef4444;
-        }
 
-        .upload-btn {
-            background: #38bdf8;
-        }
+# ---------------- ACCURACY ----------------
+def calculate_accuracy(ppt_text, spoken_text):
+    if not ppt_text or not spoken_text:
+        return 0
 
-        .analyze-btn {
-            background: #38bdf8;
-        }
+    return round(
+        difflib.SequenceMatcher(None, ppt_text, spoken_text).ratio() * 100, 2
+    )
 
-        .results {
-            margin-top: 20px;
-            text-align: left;
-        }
-    </style>
-</head>
 
-<body>
+# ---------------- FILLERS ----------------
+def count_fillers(text):
+    fillers = ["um", "uh", "like", "you know", "basically", "and"]
+    count = 0
 
-<header>🎤 TalkTrack Dashboard</header>
+    for word in fillers:
+        count += text.count(word)
 
-<div class="container">
-<div class="card">
+    return count
 
-    <!-- UPLOAD -->
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="ppt" required>
-        <br><br>
-        <button class="upload-btn">Upload PPT</button>
-    </form>
 
-    <!-- TEXT AREA -->
-    <textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
+# ---------------- PAUSES ----------------
+def count_pauses(text):
+    return text.count("...")
 
-    <br>
 
-    <!-- SPEECH BUTTONS -->
-    <button class="start-btn" onclick="startSpeech()">▶ Start Presentation</button>
-    <button class="stop-btn" onclick="stopSpeech()">■ Stop</button>
+# ---------------- SPEED ----------------
+def calculate_wpm(text):
+    words = len(text.split())
 
-    <br>
+    wpm = words * 3
 
-    <!-- ANALYZE -->
-    <form action="/analyze" method="POST" onsubmit="setText()">
-        <input type="hidden" name="text" id="hiddenText">
-        <button class="analyze-btn">Analyze</button>
-    </form>
+    if wpm < 60:
+        return 60
+    elif wpm > 150:
+        return 150
+    else:
+        return wpm
 
-    <!-- RESULTS -->
-    {% if done %}
-    <div class="results">
-        <hr>
-        <h3>📊 Results</h3>
 
-        <p><b>Spoken:</b> {{ spoken }}</p>
-        <p><b>Accuracy:</b> {{ accuracy }}%</p>
-        <p><b>Fillers:</b> {{ fillers }}</p>
-        <p><b>Speed:</b> {{ wpm }} WPM</p>
-        <p><b>Pauses:</b> {{ pauses }}</p>
+# ---------------- AI FEEDBACK ----------------
+def generate_ai_feedback(acc, fillers, wpm, pauses):
+    feedback = []
 
-        <h3>🧠 AI Feedback</h3>
-        <ul>
-            {% for f in feedback %}
-            <li>{{ f }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
+    if acc < 30:
+        feedback.append("You need to follow PPT more closely.")
+    else:
+        feedback.append("Good content alignment.")
 
-    <!-- ERROR -->
-    {% if error %}
-        <p style="color:red">{{ error }}</p>
-    {% endif %}
+    if fillers > 3:
+        feedback.append("Reduce filler words.")
+    else:
+        feedback.append("Good clarity.")
 
-</div>
-</div>
+    if wpm > 130:
+        feedback.append("Slow down.")
+    elif wpm < 70:
+        feedback.append("Speak faster.")
+    else:
+        feedback.append("Good flow.")
 
-<script>
-let recognition;
+    if pauses > 5:
+        feedback.append("Too many pauses.")
+    else:
+        feedback.append("Good pacing.")
 
-function startSpeech() {
-    recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.continuous = true;
+    return feedback
 
-    recognition.onresult = function(event) {
-        let transcript = "";
-        for (let i = 0; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-        }
-        document.getElementById("speechText").value = transcript;
-    };
 
-    recognition.start();
-}
+# ---------------- ROUTES ----------------
 
-function stopSpeech() {
-    if (recognition) {
-        recognition.stop();
-    }
-}
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-function setText() {
-    document.getElementById("hiddenText").value =
-        document.getElementById("speechText").value;
-}
-</script>
 
-</body>
-</html>
+# LOGIN (simple)
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        return redirect('/dashboard')
+    return render_template('index.html')
+
+
+# SIGNUP
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        return redirect('/login')
+    return render_template('signup.html')
+
+
+# DASHBOARD
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html', done=False)
+
+
+# UPLOAD PPT
+@app.route('/upload', methods=['POST'])
+def upload():
+    file = request.files.get('ppt')
+
+    if not file or file.filename == '':
+        return redirect('/dashboard')
+
+    file.save(UPLOAD_PATH)
+    print("PPT uploaded")
+
+    return redirect('/dashboard')
+
+
+# ANALYZE
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    spoken_text = request.form.get('text', "").lower()
+
+    if not spoken_text.strip():
+        return render_template("dashboard.html", error="No speech detected", done=False)
+
+    if not os.path.exists(UPLOAD_PATH):
+        return render_template("dashboard.html", error="Upload PPT first", done=False)
+
+    ppt_text = extract_ppt_text(UPLOAD_PATH)
+
+    ppt_text = clean_text(ppt_text)
+    spoken_text = clean_text(spoken_text)
+
+    # DEBUG (optional)
+    print("PPT:", ppt_text[:100])
+    print("SPOKEN:", spoken_text[:100])
+
+    accuracy = calculate_accuracy(ppt_text, spoken_text)
+    fillers = count_fillers(spoken_text)
+    pauses = count_pauses(spoken_text)
+    wpm = calculate_wpm(spoken_text)
+
+    feedback = generate_ai_feedback(accuracy, fillers, wpm, pauses)
+
+    return render_template(
+        "dashboard.html",
+        spoken=spoken_text,
+        accuracy=accuracy,
+        fillers=fillers,
+        pauses=pauses,
+        wpm=wpm,
+        feedback=feedback,
+        done=True
+    )
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
