@@ -5,8 +5,6 @@ import os
 
 app = Flask(__name__)
 
-ppt_text = ""
-
 
 # ---------- EXTRACT PPT ----------
 def extract_ppt_text(file):
@@ -21,23 +19,13 @@ def extract_ppt_text(file):
     return text.lower()
 
 
-# ---------- LOGIN ----------
-@app.route('/', methods=['GET', 'POST'])
+# ---------- ROUTES ----------
+
+@app.route('/')
 def login():
-    if request.method == 'POST':
-        return redirect(url_for('dashboard'))
     return render_template('index.html')
 
 
-# ---------- SIGNUP ----------
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        return redirect(url_for('login'))
-    return render_template('signup.html')
-
-
-# ---------- DASHBOARD ----------
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html')
@@ -46,12 +34,12 @@ def dashboard():
 # ---------- UPLOAD ----------
 @app.route('/upload', methods=['POST'])
 def upload():
-    global ppt_text
-
     file = request.files.get('ppt')
 
-    if file:
-        ppt_text = extract_ppt_text(file)
+    if not file:
+        return render_template('dashboard.html', error="No file selected")
+
+    file.save("uploaded.pptx")   # ✅ SAVE FILE
 
     return redirect(url_for('dashboard'))
 
@@ -59,39 +47,35 @@ def upload():
 # ---------- ANALYZE ----------
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    global ppt_text
 
     spoken = request.form.get('text', '').strip().lower()
 
     if spoken == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # ---------- ACCURACY (IMPROVED) ----------
-    if ppt_text.strip() != "":
-        matcher = difflib.SequenceMatcher(None, spoken, ppt_text)
-        accuracy = matcher.ratio() * 100
-    else:
+    # ✅ CHECK FILE EXISTS
+    if not os.path.exists("uploaded.pptx"):
         return render_template('dashboard.html', error="Upload PPT first")
 
-    # ---------- FILLER WORDS (IMPROVED) ----------
+    ppt_text = extract_ppt_text("uploaded.pptx")
+
+    # ---------- ACCURACY ----------
+    accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
+
+    # ---------- FILLERS ----------
     filler_words = ["um", "uh", "like", "you know", "basically"]
     words = spoken.split()
-
     fillers = sum(1 for word in words if word in filler_words)
 
-    # ---------- PAUSES (BETTER LOGIC) ----------
-    pauses = (
-        spoken.count(",") +      # natural pauses
-        spoken.count("...") +    # long pauses
-        spoken.count("  ")       # double space hesitation
-    )
+    # ---------- PAUSES ----------
+    pauses = spoken.count(",") + spoken.count("...") + spoken.count("  ")
 
-    # ---------- SPEED (REALISTIC) ----------
+    # ---------- SPEED ----------
     word_count = len(words)
-    duration = max(word_count * 0.5, 1)   # assume 0.5 sec per word
+    duration = max(word_count * 0.5, 1)
     wpm = (word_count / duration) * 60
 
-    # ---------- AI FEEDBACK ----------
+    # ---------- FEEDBACK ----------
     feedback = []
 
     if accuracy < 40:
@@ -99,10 +83,10 @@ def analyze():
     elif accuracy < 75:
         feedback.append("Good attempt, improve alignment")
     else:
-        feedback.append("Excellent alignment with PPT")
+        feedback.append("Excellent alignment")
 
     if fillers == 0:
-        feedback.append("Great! No filler words used")
+        feedback.append("No filler words – great job")
     elif fillers > 3:
         feedback.append("Reduce filler words")
 
@@ -127,5 +111,8 @@ def analyze():
         wpm=round(wpm, 2),
         feedback=feedback
     )
+
+
+# ---------- RUN ----------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
