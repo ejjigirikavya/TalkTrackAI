@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, redirect
 from pptx import Presentation
 import difflib
-import os
 
 app = Flask(__name__)
 
-# ---------------- PPT TEXT ----------------
+ppt_text_global = ""
+
+# ---------- EXTRACT PPT ----------
 def extract_ppt_text(file):
     prs = Presentation(file)
     text = ""
@@ -15,112 +16,89 @@ def extract_ppt_text(file):
                 text += shape.text + " "
     return text.lower()
 
-
-# ---------------- ACCURACY ----------------
+# ---------- ACCURACY ----------
 def calculate_accuracy(ppt_text, spoken_text):
-    if not ppt_text:
-        return 0
     return round(difflib.SequenceMatcher(None, ppt_text, spoken_text).ratio() * 100, 2)
 
-
-# ---------------- FILLERS ----------------
+# ---------- FILLERS ----------
 def count_fillers(text):
     fillers = ["um", "uh", "like", "you know", "basically", "and"]
-    return sum(text.count(word) for word in fillers)
+    count = 0
+    for word in fillers:
+        count += text.lower().count(word)
+    return count
 
-
-# ---------------- PAUSES ----------------
+# ---------- PAUSES ----------
 def count_pauses(text):
     return text.count("...")
 
-
-# ---------------- FEEDBACK ----------------
-def generate_ai_feedback(acc, fillers, wpm, pauses):
+# ---------- AI FEEDBACK ----------
+def generate_feedback(acc, fillers, wpm, pauses):
     feedback = []
 
-    if acc < 40:
-        feedback.append("Follow PPT more closely.")
+    if acc < 30:
+        feedback.append("You need to follow PPT more closely.")
     else:
-        feedback.append("Good alignment with PPT.")
+        feedback.append("Good clarity.")
 
     if fillers > 3:
-        feedback.append("Reduce filler words.")
-    else:
-        feedback.append("Good fluency.")
-
-    if wpm < 70:
-        feedback.append("Speak faster.")
-    elif wpm > 150:
-        feedback.append("Slow down.")
-    else:
-        feedback.append("Good pace.")
-
-    if pauses > 5:
-        feedback.append("Too many pauses.")
+        feedback.append("Too many filler words.")
     else:
         feedback.append("Good flow.")
+
+    if wpm < 90:
+        feedback.append("Speak faster.")
+    elif wpm > 160:
+        feedback.append("Slow down a bit.")
+
+    if pauses > 3:
+        feedback.append("Too many pauses.")
 
     return feedback
 
 
-# ---------------- ROUTES ----------------
-
+# ---------- ROUTES ----------
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('dashboard.html')
 
 
-@app.route('/login', methods=['POST'])
-def login():
-    return redirect('/dashboard')
-
-
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html', done=False)
-
-
-# ---------------- UPLOAD ----------------
 @app.route('/upload', methods=['POST'])
 def upload():
-    file = request.files.get('ppt')
-
-    if file:
-        file.save("uploaded.pptx")
-        return render_template("dashboard.html", message="PPT uploaded!", done=False)
-
-    return render_template("dashboard.html", error="No file selected", done=False)
+    global ppt_text_global
+    file = request.files['ppt']
+    ppt_text_global = extract_ppt_text(file)
+    return redirect('/')
 
 
-# ---------------- ANALYZE (STOP BUTTON TRIGGERS THIS) ----------------
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    global ppt_text_global
+
     spoken_text = request.form.get('text', '').lower()
 
-    if not spoken_text.strip():
-        return render_template('dashboard.html', error="No speech detected", done=False)
+    if ppt_text_global.strip() == "":
+        return render_template('dashboard.html', error="Upload PPT first")
 
-    # ✅ NO BLOCKING (IMPORTANT FIX)
-    if os.path.exists("uploaded.pptx"):
-        ppt_text = extract_ppt_text("uploaded.pptx")
-        accuracy = calculate_accuracy(ppt_text, spoken_text)
-    else:
-        accuracy = 0  # Still allow results
+    if spoken_text.strip() == "":
+        return render_template('dashboard.html', error="No speech detected")
 
+    accuracy = calculate_accuracy(ppt_text_global, spoken_text)
     fillers = count_fillers(spoken_text)
     pauses = count_pauses(spoken_text)
-    wpm = len(spoken_text.split())
 
-    feedback = generate_ai_feedback(accuracy, fillers, wpm, pauses)
+    words = len(spoken_text.split())
+    wpm = round(words / 1.5, 2) if words > 0 else 0  # approx speech duration
+
+    feedback = generate_feedback(accuracy, fillers, wpm, pauses)
 
     return render_template(
         'dashboard.html',
-        done=True,
         spoken=spoken_text,
         accuracy=accuracy,
         fillers=fillers,
-        pauses=pauses,
         wpm=wpm,
+        pauses=pauses,
         feedback=feedback
     )
 
