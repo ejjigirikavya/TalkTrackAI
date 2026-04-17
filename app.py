@@ -17,8 +17,15 @@ def extract_ppt_text(file):
 
 # -------------------- ACCURACY --------------------
 def calculate_accuracy(ppt_text, spoken_text):
-    return round(difflib.SequenceMatcher(None, ppt_text, spoken_text).ratio() * 100, 2)
+    ppt_words = set(ppt_text.split())
+    spoken_words = set(spoken_text.split())
 
+    if len(ppt_words) == 0:
+        return 0
+
+    common = ppt_words.intersection(spoken_words)
+
+    return round((len(common) / len(ppt_words)) * 100, 2)
 # -------------------- FILLERS --------------------
 def count_fillers(text):
     fillers = ["um", "uh", "like", "you know", "basically", "and"]
