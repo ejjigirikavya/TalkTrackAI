@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 from pptx import Presentation
 import difflib
+import re
 
 app = Flask(__name__)
 
@@ -65,40 +66,55 @@ def analyze():
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # Accuracy
-    if ppt_text:
-        accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
+    if ppt_text.strip() == "":
+        return render_template('dashboard.html', error="Upload PPT first")
+
+    # ---------- ACCURACY (IMPROVED) ----------
+    spoken_words = re.findall(r'\b\w+\b', spoken)
+    ppt_words = re.findall(r'\b\w+\b', ppt_text)
+
+    if spoken_words:
+        match_count = sum(1 for word in spoken_words if word in ppt_words)
+        accuracy = (match_count / len(spoken_words)) * 100
     else:
         accuracy = 0
 
-    # Filler words
-    filler_list = ["um", "uh", "like", "you know", "basically"]
-    fillers = sum(spoken.count(word) for word in filler_list)
+    # ---------- FILLERS (IMPROVED) ----------
+    filler_list = ["um", "uh", "like", "basically", "actually", "so"]
+    fillers = sum(1 for word in spoken_words if word in filler_list)
 
-    # Pauses
-    pauses = spoken.count("...")
+    # ---------- PAUSES (ESTIMATED) ----------
+    pauses = len(spoken_words) // 8
 
-    # Speed
-    wpm = len(spoken.split())
+    # ---------- SPEED ----------
+    wpm = len(spoken_words)
 
-    # Feedback
+    # ---------- FEEDBACK ----------
     feedback = []
 
     if accuracy < 40:
         feedback.append("Follow PPT more closely")
+    elif accuracy < 75:
+        feedback.append("Good attempt, improve alignment")
     else:
-        feedback.append("Good alignment")
+        feedback.append("Excellent alignment")
 
     if fillers > 3:
         feedback.append("Reduce filler words")
+    else:
+        feedback.append("Good clarity")
+
+    if pauses > 5:
+        feedback.append("Too many pauses")
+    else:
+        feedback.append("Smooth delivery")
 
     if wpm < 70:
         feedback.append("Speak faster")
     elif wpm > 150:
         feedback.append("Slow down")
-
-    if pauses > 3:
-        feedback.append("Too many pauses")
+    else:
+        feedback.append("Good speaking speed")
 
     return render_template(
         'dashboard.html',
