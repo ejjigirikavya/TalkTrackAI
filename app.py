@@ -4,7 +4,6 @@ import difflib
 
 app = Flask(__name__)
 
-# Global storage
 ppt_text = ""
 
 
@@ -43,7 +42,7 @@ def dashboard():
     return render_template('dashboard.html')
 
 
-# ---------- UPLOAD PPT ----------
+# ---------- UPLOAD ----------
 @app.route('/upload', methods=['POST'])
 def upload():
     global ppt_text
@@ -66,15 +65,20 @@ def analyze():
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # Calculate accuracy
+    # Accuracy
     if ppt_text:
         accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
     else:
         accuracy = 0
 
-    # Metrics
-    fillers = sum(spoken.count(w) for w in ["um", "uh", "like"])
+    # Filler words
+    filler_list = ["um", "uh", "like", "you know", "basically"]
+    fillers = sum(spoken.count(word) for word in filler_list)
+
+    # Pauses
     pauses = spoken.count("...")
+
+    # Speed
     wpm = len(spoken.split())
 
     # Feedback
@@ -83,13 +87,15 @@ def analyze():
     if accuracy < 40:
         feedback.append("Follow PPT more closely")
     else:
-        feedback.append("Good clarity")
+        feedback.append("Good alignment")
 
     if fillers > 3:
         feedback.append("Reduce filler words")
 
     if wpm < 70:
         feedback.append("Speak faster")
+    elif wpm > 150:
+        feedback.append("Slow down")
 
     if pauses > 3:
         feedback.append("Too many pauses")
@@ -105,6 +111,5 @@ def analyze():
     )
 
 
-# ---------- RUN ----------
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
