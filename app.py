@@ -1,65 +1,110 @@
-<h2>Dashboard</h2>
+from flask import Flask, render_template, request, redirect, url_for
+from pptx import Presentation
+import difflib
 
-<form action="/upload" method="POST" enctype="multipart/form-data">
-    <input type="file" name="ppt">
-    <button>Upload PPT</button>
-</form>
+app = Flask(__name__)
 
-<br>
+# Global storage
+ppt_text = ""
 
-<textarea id="speechText" rows="4" cols="50"></textarea><br><br>
 
-<button onclick="startSpeech()">Start</button>
-<button onclick="stopSpeech()">Stop</button>
+# ---------- EXTRACT PPT ----------
+def extract_ppt_text(file):
+    prs = Presentation(file)
+    text = ""
 
-<form id="form" action="/analyze" method="POST">
-    <input type="hidden" name="text" id="hiddenText">
-</form>
+    for slide in prs.slides:
+        for shape in slide.shapes:
+            if hasattr(shape, "text"):
+                text += shape.text + " "
 
-{% if error %}
-<p style="color:red">{{error}}</p>
-{% endif %}
+    return text.lower()
 
-{% if spoken %}
-<h3>Results</h3>
-<p>Accuracy: {{accuracy}}</p>
-<p>Fillers: {{fillers}}</p>
-<p>WPM: {{wpm}}</p>
-<p>Pauses: {{pauses}}</p>
 
-<ul>
-{% for f in feedback %}
-<li>{{f}}</li>
-{% endfor %}
-</ul>
-{% endif %}
+# ---------- LOGIN ----------
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        return redirect(url_for('dashboard'))
+    return render_template('index.html')
 
-<script>
-let recognition;
 
-function startSpeech(){
-    recognition = new webkitSpeechRecognition();
-    recognition.continuous = true;
+# ---------- SIGNUP ----------
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        return redirect(url_for('login'))
+    return render_template('signup.html')
 
-    recognition.onresult = function(e){
-        let text = "";
-        for(let i=0;i<e.results.length;i++){
-            text += e.results[i][0].transcript;
-        }
-        document.getElementById("speechText").value = text;
-    };
 
-    recognition.start();
-}
+# ---------- DASHBOARD ----------
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
 
-function stopSpeech(){
-    recognition.stop();
 
-    setTimeout(()=>{
-        document.getElementById("hiddenText").value =
-            document.getElementById("speechText").value;
+# ---------- UPLOAD PPT ----------
+@app.route('/upload', methods=['POST'])
+def upload():
+    global ppt_text
 
-        document.getElementById("form").submit();
-    }, 500);
-}
-</script>
+    file = request.files.get('ppt')
+
+    if file:
+        ppt_text = extract_ppt_text(file)
+
+    return redirect(url_for('dashboard'))
+
+
+# ---------- ANALYZE ----------
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    global ppt_text
+
+    spoken = request.form.get('text', '').lower()
+
+    if spoken.strip() == "":
+        return render_template('dashboard.html', error="No speech detected")
+
+    # Calculate accuracy
+    if ppt_text:
+        accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
+    else:
+        accuracy = 0
+
+    # Metrics
+    fillers = sum(spoken.count(w) for w in ["um", "uh", "like"])
+    pauses = spoken.count("...")
+    wpm = len(spoken.split())
+
+    # Feedback
+    feedback = []
+
+    if accuracy < 40:
+        feedback.append("Follow PPT more closely")
+    else:
+        feedback.append("Good clarity")
+
+    if fillers > 3:
+        feedback.append("Reduce filler words")
+
+    if wpm < 70:
+        feedback.append("Speak faster")
+
+    if pauses > 3:
+        feedback.append("Too many pauses")
+
+    return render_template(
+        'dashboard.html',
+        spoken=spoken,
+        accuracy=round(accuracy, 2),
+        fillers=fillers,
+        pauses=pauses,
+        wpm=wpm,
+        feedback=feedback
+    )
+
+
+# ---------- RUN ----------
+if __name__ == '__main__':
+    app.run(debug=True)
