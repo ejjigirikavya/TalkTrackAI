@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for
 from pptx import Presentation
 import difflib
-import os
-ppt_txt=""
 
 app = Flask(__name__)
+
+# 🔥 store ppt text safely
+ppt_text_store = {"text": ""}
 
 
 # ---------- EXTRACT PPT ----------
@@ -21,19 +22,9 @@ def extract_ppt_text(file):
 
 
 # ---------- LOGIN ----------
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def login():
-    if request.method == 'POST':
-        return redirect(url_for('dashboard'))
     return render_template('index.html')
-
-
-# ---------- SIGNUP ----------
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        return redirect(url_for('login'))
-    return render_template('signup.html')
 
 
 # ---------- DASHBOARD ----------
@@ -45,87 +36,94 @@ def dashboard():
 # ---------- UPLOAD ----------
 @app.route('/upload', methods=['POST'])
 def upload():
-    global ppt_text
+    try:
+        file = request.files.get('ppt')
 
-    file = request.files.get('ppt')
+        if not file:
+            return render_template('dashboard.html', error="No file selected")
 
-    if not file:
-        return render_template('dashboard.html', error="No file selected")
+        # ✅ extract and store text (NO FILE SAVE)
+        ppt_text_store["text"] = extract_ppt_text(file)
 
-    # ✅ DIRECTLY EXTRACT TEXT (NO SAVE)
-    ppt_text = extract_ppt_text(file)
+        return redirect(url_for('dashboard'))
 
-    return redirect(url_for('dashboard'))
+    except Exception as e:
+        return render_template('dashboard.html', error=f"Upload error: {str(e)}")
+
 
 # ---------- ANALYZE ----------
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    global ppt_text
+    try:
+        spoken = request.form.get('text', '').strip().lower()
 
-    spoken = request.form.get('text', '').strip().lower()
+        if spoken == "":
+            return render_template('dashboard.html', error="No speech detected")
 
-    if spoken == "":
-        return render_template('dashboard.html', error="No speech detected")
+        ppt_text = ppt_text_store["text"]
 
-    # ❌ REMOVE os.path.exists
-    if ppt_text.strip() == "":
-        return render_template('dashboard.html', error="Upload PPT first")
+        if ppt_text.strip() == "":
+            return render_template('dashboard.html', error="Upload PPT first")
 
-    # ---------- ACCURACY ----------
-    accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
+        # ---------- ACCURACY ----------
+        accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
 
-    # ---------- FILLERS ----------
-    filler_words = ["um", "uh", "like", "you know", "basically"]
-    words = spoken.split()
-    fillers = sum(1 for word in words if word in filler_words)
+        # ---------- FILLERS ----------
+        filler_words = ["um", "uh", "like", "you know", "basically"]
+        words = spoken.split()
+        fillers = sum(1 for word in words if word in filler_words)
 
-    # ---------- PAUSES ----------
-    pauses = spoken.count(",") + spoken.count("...") + spoken.count("  ")
+        # ---------- PAUSES ----------
+        pauses = spoken.count(",") + spoken.count("...") + spoken.count("  ")
 
-    # ---------- SPEED ----------
-    word_count = len(words)
-    duration = max(word_count * 0.5, 1)
-    wpm = (word_count / duration) * 60
+        # ---------- SPEED ----------
+        word_count = len(words)
+        duration = max(word_count * 0.5, 1)
+        wpm = (word_count / duration) * 60
 
-    # ---------- FEEDBACK ----------
-    feedback = []
+        # ---------- FEEDBACK ----------
+        feedback = []
 
-    if accuracy < 40:
-        feedback.append("Follow PPT more closely")
-    elif accuracy < 75:
-        feedback.append("Good attempt, improve alignment")
-    else:
-        feedback.append("Excellent alignment")
+        if accuracy < 40:
+            feedback.append("Follow PPT more closely")
+        elif accuracy < 75:
+            feedback.append("Good attempt, improve alignment")
+        else:
+            feedback.append("Excellent alignment")
 
-    if fillers == 0:
-        feedback.append("No filler words – great job")
-    elif fillers > 3:
-        feedback.append("Reduce filler words")
+        if fillers == 0:
+            feedback.append("No filler words – great job")
+        elif fillers > 3:
+            feedback.append("Reduce filler words")
 
-    if pauses == 0:
-        feedback.append("Smooth speech delivery")
-    elif pauses > 3:
-        feedback.append("Too many pauses")
+        if pauses == 0:
+            feedback.append("Smooth speech delivery")
+        elif pauses > 3:
+            feedback.append("Too many pauses")
 
-    if wpm < 70:
-        feedback.append("Speak faster")
-    elif wpm > 150:
-        feedback.append("Slow down")
-    else:
-        feedback.append("Good speaking speed")
+        if wpm < 70:
+            feedback.append("Speak faster")
+        elif wpm > 150:
+            feedback.append("Slow down")
+        else:
+            feedback.append("Good speaking speed")
 
-    return render_template(
-        'dashboard.html',
-        spoken=spoken,
-        accuracy=round(accuracy, 2),
-        fillers=fillers,
-        pauses=pauses,
-        wpm=round(wpm, 2),
-        feedback=feedback
-    )
+        return render_template(
+            'dashboard.html',
+            spoken=spoken,
+            accuracy=round(accuracy, 2),
+            fillers=fillers,
+            pauses=pauses,
+            wpm=round(wpm, 2),
+            feedback=feedback
+        )
+
+    except Exception as e:
+        # 🔥 prevents 500 crash
+        return render_template('dashboard.html', error=f"Analyze error: {str(e)}")
 
 
-# ---------- SAFETY (PREVENT 405 ERROR) ----------
+# ---------- SAFETY ----------
 @app.route('/analyze', methods=['GET'])
 def analyze_get():
     return redirect(url_for('dashboard'))
