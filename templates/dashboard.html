@@ -1,149 +1,39 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>TalkTrack Dashboard</title>
+<h2>Dashboard</h2>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: white;
-        }
+<form action="/upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="ppt">
+    <button>Upload PPT</button>
+</form>
 
-        h2 {
-            text-align: center;
-            padding-top: 20px;
-        }
+<br>
 
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 90vh;
-        }
+<textarea id="speechText" rows="4" cols="50"></textarea><br><br>
 
-        .card {
-            background: rgba(255,255,255,0.08);
-            padding: 30px;
-            border-radius: 15px;
-            width: 420px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            text-align: center;
-        }
+<button onclick="startSpeech()">Start</button>
+<button onclick="stopSpeech()">Stop</button>
 
-        input[type="file"] {
-            margin-bottom: 10px;
-            color: white;
-        }
+<form id="form" action="/analyze" method="POST">
+    <input type="hidden" name="text" id="hiddenText">
+</form>
 
-        textarea {
-            width: 100%;
-            height: 90px;
-            border-radius: 10px;
-            border: none;
-            padding: 10px;
-            margin-top: 10px;
-            resize: none;
-        }
+{% if error %}
+<p style="color:red">{{error}}</p>
+{% endif %}
 
-        button {
-            padding: 10px 15px;
-            margin: 8px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+{% if spoken %}
+<h3>Results</h3>
+<p>Accuracy: {{accuracy}}</p>
+<p>Fillers: {{fillers}}</p>
+<p>WPM: {{wpm}}</p>
+<p>Pauses: {{pauses}}</p>
 
-        .upload {
-            background: #4fc3f7;
-            color: black;
-        }
+<ul>
+{% for f in feedback %}
+<li>{{f}}</li>
+{% endfor %}
+</ul>
+{% endif %}
 
-        .start {
-            background: #29b6f6;
-            color: black;
-        }
-
-        .stop {
-            background: #ef5350;
-            color: white;
-        }
-
-        .results {
-            margin-top: 20px;
-            text-align: left;
-            background: rgba(255,255,255,0.1);
-            padding: 15px;
-            border-radius: 10px;
-        }
-
-        ul {
-            padding-left: 20px;
-        }
-
-        .error {
-            color: #ff6b6b;
-        }
-    </style>
-</head>
-
-<body>
-
-<h2>🎤 TalkTrack Dashboard</h2>
-
-<div class="container">
-<div class="card">
-
-    <!-- Upload -->
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="ppt" required><br>
-        <button class="upload">Upload PPT</button>
-    </form>
-
-    <!-- Speech -->
-    <textarea id="speechText" placeholder="Speak here..."></textarea>
-
-    <br>
-
-    <button class="start" onclick="startSpeech()">▶ Start</button>
-    <button class="stop" onclick="stopSpeech()">■ Stop</button>
-
-    <!-- Hidden form -->
-    <form id="form" action="/analyze" method="POST">
-        <input type="hidden" name="text" id="hiddenText">
-    </form>
-
-    <!-- Error -->
-    {% if error %}
-        <p class="error">{{ error }}</p>
-    {% endif %}
-
-    <!-- Results -->
-    {% if spoken %}
-    <div class="results">
-        <h3>📊 Results</h3>
-
-        <p><b>Spoken:</b> {{ spoken }}</p>
-        <p><b>Accuracy:</b> {{ accuracy }}%</p>
-        <p><b>Fillers:</b> {{ fillers }}</p>
-        <p><b>Speed:</b> {{ wpm }} WPM</p>
-        <p><b>Pauses:</b> {{ pauses }}</p>
-
-        <h4>🧠 AI Feedback</h4>
-        <ul>
-        {% for f in feedback %}
-            <li>{{ f }}</li>
-        {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
-
-</div>
-</div>
-
-<!-- JS -->
 <script>
 let recognition;
 
@@ -173,6 +63,3 @@ function stopSpeech(){
     }, 500);
 }
 </script>
-
-</body>
-</html>
