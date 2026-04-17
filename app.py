@@ -5,53 +5,56 @@ import os
 
 app = Flask(__name__)
 
-# -------------------- PPT TEXT --------------------
+UPLOAD_PATH = "uploaded.pptx"
+
+# ---------------- PPT TEXT ----------------
 def extract_ppt_text(file):
     prs = Presentation(file)
     text = ""
+
     for slide in prs.slides:
         for shape in slide.shapes:
             if hasattr(shape, "text"):
                 text += shape.text + " "
-    return text.lower()
 
-# -------------------- ACCURACY --------------------
+    return text
+
+
+# ---------------- CLEAN TEXT ----------------
+def clean_text(text):
+    return " ".join(text.lower().split())
+
+
+# ---------------- ACCURACY ----------------
 def calculate_accuracy(ppt_text, spoken_text):
     if not ppt_text or not spoken_text:
         return 0
 
-    # 1. Sequence similarity (overall)
-    seq_score = difflib.SequenceMatcher(None, ppt_text, spoken_text).ratio()
+    return round(
+        difflib.SequenceMatcher(None, ppt_text, spoken_text).ratio() * 100, 2
+    )
 
-    # 2. Word overlap
-    ppt_words = set(ppt_text.split())
-    spoken_words = set(spoken_text.split())
 
-    if len(ppt_words) == 0:
-        word_score = 0
-    else:
-        common_words = ppt_words.intersection(spoken_words)
-        word_score = len(common_words) / len(ppt_words)
-
-    # 3. Combine both (weighted)
-    final_score = (0.6 * seq_score) + (0.4 * word_score)
-
-    return round(final_score * 100, 2)
-# -------------------- FILLERS --------------------
+# ---------------- FILLERS ----------------
 def count_fillers(text):
     fillers = ["um", "uh", "like", "you know", "basically", "and"]
     count = 0
+
     for word in fillers:
-        count += text.lower().count(word)
+        count += text.count(word)
+
     return count
 
-# -------------------- PAUSES --------------------
+
+# ---------------- PAUSES ----------------
 def count_pauses(text):
     return text.count("...")
 
-# -------------------- SPEED (FIXED HUMAN RANGE) --------------------
+
+# ---------------- SPEED ----------------
 def calculate_wpm(text):
     words = len(text.split())
+
     wpm = words * 3
 
     if wpm < 60:
@@ -61,95 +64,117 @@ def calculate_wpm(text):
     else:
         return wpm
 
-# -------------------- AI FEEDBACK --------------------
+
+# ---------------- AI FEEDBACK ----------------
 def generate_ai_feedback(acc, fillers, wpm, pauses):
     feedback = []
 
-    if acc < 50:
+    if acc < 30:
         feedback.append("You need to follow PPT more closely.")
+    else:
+        feedback.append("Good content alignment.")
+
+    if fillers > 3:
+        feedback.append("Reduce filler words.")
     else:
         feedback.append("Good clarity.")
 
-    if fillers > 3:
-        feedback.append("Avoid filler words.")
-
-    if wpm > 120:
+    if wpm > 130:
         feedback.append("Slow down.")
     elif wpm < 70:
         feedback.append("Speak faster.")
+    else:
+        feedback.append("Good flow.")
 
     if pauses > 5:
         feedback.append("Too many pauses.")
     else:
-        feedback.append("Good flow.")
+        feedback.append("Good pacing.")
 
     return feedback
 
-# -------------------- ROUTES --------------------
+
+# ---------------- ROUTES ----------------
+
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# LOGIN
+
+# LOGIN (simple)
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         return redirect('/dashboard')
     return render_template('index.html')
 
+
 # SIGNUP
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
+@app.route('/register', methods=['GET', 'POST'])
+def register():
     if request.method == 'POST':
         return redirect('/login')
     return render_template('signup.html')
+
 
 # DASHBOARD
 @app.route('/dashboard')
 def dashboard():
     return render_template('dashboard.html', done=False)
 
+
 # UPLOAD PPT
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files.get('ppt')
-    if file:
-        file.save("uploaded.pptx")
+
+    if not file or file.filename == '':
+        return redirect('/dashboard')
+
+    file.save(UPLOAD_PATH)
+    print("PPT uploaded")
+
     return redirect('/dashboard')
 
-# ANALYZE (SAFE VERSION)
+
+# ANALYZE
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    try:
-        spoken_text = request.form.get('text', '').lower()
+    spoken_text = request.form.get('text', "").lower()
 
-        if not spoken_text.strip():
-            return render_template('dashboard.html',
-                                   error="No speech detected",
-                                   done=False)
+    if not spoken_text.strip():
+        return render_template("dashboard.html", error="No speech detected", done=False)
 
-        ppt_text = ""
-        if os.path.exists("uploaded.pptx"):
-            ppt_text = extract_ppt_text("uploaded.pptx")
+    if not os.path.exists(UPLOAD_PATH):
+        return render_template("dashboard.html", error="Upload PPT first", done=False)
 
-        acc = calculate_accuracy(ppt_text, spoken_text)
-        fillers = count_fillers(spoken_text)
-        pauses = count_pauses(spoken_text)
-        wpm = calculate_wpm(spoken_text)
-        feedback = generate_ai_feedback(acc, fillers, wpm, pauses)
+    ppt_text = extract_ppt_text(UPLOAD_PATH)
 
-        return render_template('dashboard.html',
-                               done=True,
-                               spoken=spoken_text,
-                               accuracy=acc,
-                               fillers=fillers,
-                               pauses=pauses,
-                               wpm=wpm,
-                               feedback=feedback)
+    ppt_text = clean_text(ppt_text)
+    spoken_text = clean_text(spoken_text)
 
-    except Exception as e:
-        return f"Error: {str(e)}"
+    # DEBUG (optional)
+    print("PPT:", ppt_text[:100])
+    print("SPOKEN:", spoken_text[:100])
 
-# RUN
+    accuracy = calculate_accuracy(ppt_text, spoken_text)
+    fillers = count_fillers(spoken_text)
+    pauses = count_pauses(spoken_text)
+    wpm = calculate_wpm(spoken_text)
+
+    feedback = generate_ai_feedback(accuracy, fillers, wpm, pauses)
+
+    return render_template(
+        "dashboard.html",
+        spoken=spoken_text,
+        accuracy=accuracy,
+        fillers=fillers,
+        pauses=pauses,
+        wpm=wpm,
+        feedback=feedback,
+        done=True
+    )
+
+
 if __name__ == '__main__':
     app.run(debug=True)
