@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect
+   from flask import Flask, render_template, request, redirect
 from pptx import Presentation
 import difflib
 import os
@@ -58,4 +58,84 @@ def generate_ai_feedback(acc, fillers, wpm, pauses):
     elif wpm > 150:
         feedback.append("Slow down.")
     else:
-        feedback
+        feedback.append("Good pace.")
+
+    if pauses > 5:
+        feedback.append("Too many pauses.")
+    else:
+        feedback.append("Good flow.")
+
+    return feedback
+
+
+# ----------- ROUTES -----------
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        return redirect('/dashboard')
+    return render_template('index.html')
+
+
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html', done=False)
+
+
+# ----------- UPLOAD PPT -----------
+@app.route('/upload', methods=['POST'])
+def upload():
+    global ppt_text_global
+
+    file = request.files.get('ppt')
+
+    if not file:
+        return render_template('dashboard.html', error="No file uploaded")
+
+    file_path = "uploaded.pptx"
+    file.save(file_path)
+
+    ppt_text_global = extract_ppt_text(file_path)
+
+    return render_template('dashboard.html', message="PPT uploaded successfully!")
+
+
+# ----------- ANALYZE (TRIGGERED BY STOP BUTTON) -----------
+@app.route('/analyze', methods=['POST'])
+def analyze():
+    global ppt_text_global
+
+    if not ppt_text_global:
+        return render_template('dashboard.html', error="Upload PPT first")
+
+    spoken_text = request.form.get('text', '').lower()
+
+    if not spoken_text.strip():
+        return render_template('dashboard.html', error="No speech detected")
+
+    acc = calculate_accuracy(ppt_text_global, spoken_text)
+    fillers = count_fillers(spoken_text)
+    pauses = count_pauses(spoken_text)
+    wpm = len(spoken_text.split())
+
+    feedback = generate_ai_feedback(acc, fillers, wpm, pauses)
+
+    return render_template(
+        'dashboard.html',
+        done=True,
+        spoken=spoken_text,
+        accuracy=acc,
+        fillers=fillers,
+        pauses=pauses,
+        wpm=wpm,
+        feedback=feedback
+    )
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
