@@ -1,126 +1,81 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TalkTrack Dashboard</title>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial;
-            background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-
-        .card {
-            width: 420px;
-            padding: 25px;
-            border-radius: 15px;
-            background: rgba(255,255,255,0.08);
-            text-align: center;
-            box-shadow: 0 0 20px rgba(0,0,0,0.4);
-        }
-
-        h2 {
-            margin-bottom: 20px;
-        }
-
-        textarea {
-            width: 100%;
-            height: 90px;
-            border-radius: 10px;
-            border: none;
-            padding: 10px;
-            margin-top: 10px;
-            resize: none;
-        }
-
-        button {
-            padding: 10px 15px;
-            margin: 5px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .upload { background: #38bdf8; color: black; }
-        .start { background: #22c55e; }
-        .stop { background: #ef4444; }
-
-        .results {
-            margin-top: 20px;
-            text-align: left;
-            background: rgba(255,255,255,0.08);
-            padding: 15px;
-            border-radius: 10px;
-        }
-
-        ul {
-            padding-left: 20px;
-        }
-
-        .error {
-            color: red;
-        }
-    </style>
+<title>Dashboard</title>
+<style>
+body{
+    font-family: Arial;
+    background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    color:white;
+    text-align:center;
+}
+.card{
+    width:400px;
+    margin:auto;
+    margin-top:50px;
+    padding:20px;
+    border-radius:10px;
+    background:rgba(255,255,255,0.1);
+}
+textarea{
+    width:100%;
+    height:100px;
+}
+button{
+    padding:10px;
+    margin:5px;
+}
+</style>
 </head>
 
 <body>
 
 <div class="card">
 
-    <h2>🎤 TalkTrack Dashboard</h2>
+<h2>TalkTrack Dashboard</h2>
 
-    <!-- Upload PPT -->
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="ppt">
-        <br>
-        <button class="upload">Upload PPT</button>
-    </form>
+<!-- Upload -->
+<form action="/upload" method="POST" enctype="multipart/form-data">
+<input type="file" name="ppt">
+<button>Upload PPT</button>
+</form>
 
-    <!-- Speech -->
-    <textarea id="speechText" placeholder="Speak here..."></textarea>
+<br>
 
-    <br>
+<!-- Speech -->
+<textarea id="speechText" placeholder="Speak here..."></textarea>
 
-    <!-- Buttons -->
-    <button class="start" onclick="startSpeech()">▶ Start</button>
-    <button class="stop" onclick="stopSpeech()">■ Stop</button>
+<br>
 
-    <!-- Hidden Form -->
-    <form id="form" action="/analyze" method="POST">
-        <input type="hidden" name="text" id="hiddenText">
-    </form>
+<button onclick="startSpeech()">Start</button>
+<button onclick="stopSpeech()">Stop</button>
 
-    <!-- Error -->
-    {% if error %}
-        <p class="error">{{error}}</p>
-    {% endif %}
+<!-- Hidden form -->
+<form id="form" action="/analyze" method="POST">
+<input type="hidden" name="text" id="hiddenText">
+</form>
 
-    <!-- Results -->
-    {% if spoken %}
-    <div class="results">
-        <h3>📊 Results</h3>
+{% if error %}
+<p style="color:red">{{error}}</p>
+{% endif %}
 
-        <p><b>Spoken:</b> {{spoken}}</p>
-        <p><b>Accuracy:</b> {{accuracy}}%</p>
-        <p><b>Filler Words:</b> {{fillers}}</p>
-        <p><b>Pauses:</b> {{pauses}}</p>
-        <p><b>Speed:</b> {{wpm}} WPM</p>
+{% if spoken %}
+<h3>Results</h3>
 
-        <!-- 🤖 AI FEEDBACK -->
-        <h3>🤖 AI Feedback</h3>
-        <ul>
-        {% for f in feedback %}
-            <li>{{f}}</li>
-        {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
+<p><b>Spoken:</b> {{spoken}}</p>
+<p><b>Accuracy:</b> {{accuracy}}%</p>
+<p><b>Filler Words:</b> {{fillers}}</p>
+<p><b>Pauses:</b> {{pauses}}</p>
+<p><b>Speed:</b> {{wpm}} WPM</p>
+
+<h3>🤖 AI Feedback</h3>
+<ul>
+{% for f in feedback %}
+<li>{{f}}</li>
+{% endfor %}
+</ul>
+
+{% endif %}
 
 </div>
 
@@ -167,7 +122,7 @@ function stopSpeech(){
 
         document.getElementById("hiddenText").value = text;
 
-        document.getElementById("form").submit();
+        document.getElementById("form").submit();   // ✅ FIXED
     }, 1000);
 }
 </script>
