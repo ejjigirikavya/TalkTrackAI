@@ -1,164 +1,112 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TalkTrack Dashboard</title>
+<title>TalkTrack Dashboard</title>
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-            color: white;
-        }
+<style>
+body {
+    margin:0;
+    font-family: Arial;
+    background: linear-gradient(to right,#0f2027,#203a43,#2c5364);
+    color:white;
+}
 
-        header {
-            text-align: center;
-            padding: 20px;
-            font-size: 24px;
-            font-weight: bold;
-        }
+.container {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
 
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 80vh;
-        }
+.card {
+    background:rgba(255,255,255,0.08);
+    padding:30px;
+    border-radius:15px;
+    width:400px;
+    text-align:center;
+}
 
-        .card {
-            background: rgba(255, 255, 255, 0.08);
-            padding: 30px;
-            border-radius: 15px;
-            width: 400px;
-            text-align: center;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
+button {
+    padding:10px;
+    margin:5px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+}
 
-        input[type="file"] {
-            margin-bottom: 10px;
-            color: white;
-        }
+.upload { background:#4fc3f7; }
+.start { background:#29b6f6; }
+.stop { background:#ef5350; color:white; }
+.analyze { background:#4fc3f7; width:100%; }
 
-        button {
-            border: none;
-            padding: 12px 20px;
-            margin: 8px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-        }
+textarea {
+    width:100%;
+    height:80px;
+    border-radius:8px;
+    padding:10px;
+}
 
-        .upload-btn {
-            background: #4fc3f7;
-            color: black;
-        }
+hr { margin:20px 0; }
 
-        .start-btn {
-            background: #29b6f6;
-            color: black;
-        }
+.results { text-align:left; }
+</style>
 
-        .stop-btn {
-            background: #ef5350;
-            color: white;
-        }
-
-        .analyze-btn {
-            background: #4fc3f7;
-            color: black;
-            width: 100%;
-        }
-
-        textarea {
-            width: 100%;
-            height: 80px;
-            border-radius: 8px;
-            border: none;
-            padding: 10px;
-            margin-top: 10px;
-            resize: none;
-        }
-
-        hr {
-            margin: 20px 0;
-            border: 0.5px solid #aaa;
-        }
-
-        .results {
-            text-align: left;
-        }
-
-        .results h3 {
-            margin-bottom: 10px;
-        }
-
-        .feedback {
-            margin-top: 10px;
-        }
-
-        ul {
-            padding-left: 20px;
-        }
-    </style>
 </head>
 
 <body>
 
-<header>🎤 TalkTrack Dashboard</header>
-
 <div class="container">
-    <div class="card">
+<div class="card">
 
-        <!-- Upload -->
-        <form action="/upload" method="POST" enctype="multipart/form-data">
-            <input type="file" name="ppt" required><br>
-            <button class="upload-btn">Upload PPT</button>
-        </form>
+<form action="/upload" method="POST" enctype="multipart/form-data">
+<input type="file" name="ppt" required><br>
+<button class="upload">Upload PPT</button>
+</form>
 
-        <!-- Speech -->
-        <textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
+<textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
 
-        <!-- Buttons -->
-        <div>
-            <button class="start-btn" onclick="startSpeech()">▶ Start Presentation</button>
-            <button class="stop-btn" onclick="stopSpeech()">■ Stop</button>
-        </div>
+<br>
 
-        <!-- Analyze -->
-        <form action="/analyze" method="POST" onsubmit="setText()">
-            <input type="hidden" name="text" id="hiddenText">
-            <button class="analyze-btn">Analyze</button>
-        </form>
+<button class="start" onclick="startSpeech()">▶ Start Presentation</button>
+<button class="stop" onclick="stopSpeech()">■ Stop</button>
 
-        <hr>
+<form action="/analyze" method="POST" onsubmit="setText()">
+<input type="hidden" name="text" id="hiddenText">
+<button class="analyze">Analyze</button>
+</form>
 
-        <!-- Results -->
-        {% if done %}
-        <div class="results">
-            <h3>📊 Results</h3>
+<hr>
 
-            <p><b>Spoken:</b> {{ spoken }}</p>
-            <p><b>Accuracy:</b> {{ accuracy }}%</p>
-            <p><b>Fillers:</b> {{ fillers }}</p>
-            <p><b>Speed:</b> {{ wpm }} WPM</p>
-            <p><b>Pauses:</b> {{ pauses }}</p>
+{% if message %}
+<p style="color:lightgreen">{{ message }}</p>
+{% endif %}
 
-            <div class="feedback">
-                <h4>🧠 AI Feedback</h4>
-                <ul>
-                    {% for f in feedback %}
-                    <li>{{ f }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-        {% endif %}
+{% if error %}
+<p style="color:red">{{ error }}</p>
+{% endif %}
 
-        {% if error %}
-        <p style="color:red">{{ error }}</p>
-        {% endif %}
+{% if done %}
+<div class="results">
+<h3>📊 Results</h3>
 
-    </div>
+<p><b>Spoken:</b> {{ spoken }}</p>
+<p><b>Accuracy:</b> {{ accuracy }}%</p>
+<p><b>Fillers:</b> {{ fillers }}</p>
+<p><b>Speed:</b> {{ wpm }} WPM</p>
+<p><b>Pauses:</b> {{ pauses }}</p>
+
+<h4>🧠 AI Feedback</h4>
+<ul>
+{% for f in feedback %}
+<li>{{ f }}</li>
+{% endfor %}
+</ul>
+
+</div>
+{% endif %}
+
+</div>
 </div>
 
 <script>
@@ -169,8 +117,8 @@ function startSpeech() {
     recognition.continuous = true;
 
     recognition.onresult = function(event) {
-        let text = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        let text="";
+        for(let i=event.resultIndex;i<event.results.length;i++){
             text += event.results[i][0].transcript;
         }
         document.getElementById("speechText").value = text;
