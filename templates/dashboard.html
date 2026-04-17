@@ -1,52 +1,73 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Dashboard</title>
-<style>
-body {
-    margin: 0;
-    font-family: Arial;
-    background: linear-gradient(135deg, #0f172a, #1e293b);
-    color: white;
-    text-align: center;
-}
-header {
-    background: #020617;
-    padding: 15px;
-    font-size: 20px;
-}
-.container {
-    margin-top: 40px;
-}
-.card {
-    background: rgba(255,255,255,0.05);
-    padding: 25px;
-    border-radius: 15px;
-    width: 420px;
-    margin: auto;
-}
-button {
-    padding: 10px 20px;
-    margin: 10px;
-    border-radius: 8px;
-    border: none;
-    background: #38bdf8;
-    cursor: pointer;
-}
-.stop-btn {
-    background: red;
-}
-textarea {
-    width: 90%;
-    height: 80px;
-    margin-top: 10px;
-    border-radius: 8px;
-}
-.result {
-    margin-top: 20px;
-    text-align: left;
-}
-</style>
+    <title>Dashboard</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+            text-align: center;
+        }
+
+        header {
+            background: #020617;
+            padding: 15px;
+            font-size: 22px;
+        }
+
+        .container {
+            margin-top: 40px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            padding: 25px;
+            border-radius: 15px;
+            width: 420px;
+            margin: auto;
+        }
+
+        textarea {
+            width: 90%;
+            height: 80px;
+            margin-top: 10px;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .start-btn {
+            background: #38bdf8;
+        }
+
+        .stop-btn {
+            background: #ef4444;
+        }
+
+        .upload-btn {
+            background: #38bdf8;
+        }
+
+        .analyze-btn {
+            background: #38bdf8;
+        }
+
+        .results {
+            margin-top: 20px;
+            text-align: left;
+        }
+    </style>
 </head>
 
 <body>
@@ -56,70 +77,81 @@ textarea {
 <div class="container">
 <div class="card">
 
-<form action="/upload" method="POST" enctype="multipart/form-data">
-    <input type="file" name="ppt" required>
-    <br><br>
-    <button>Upload PPT</button>
-</form>
+    <!-- UPLOAD -->
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="ppt" required>
+        <br><br>
+        <button class="upload-btn">Upload PPT</button>
+    </form>
 
-<textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
+    <!-- TEXT AREA -->
+    <textarea id="speechText" placeholder="Your speech will appear here..."></textarea>
 
-<br>
+    <br>
 
-<button onclick="startSpeech()">▶ Start Presentation</button>
-<button class="stop-btn" onclick="stopSpeech()">■ Stop</button>
+    <!-- SPEECH BUTTONS -->
+    <button class="start-btn" onclick="startSpeech()">▶ Start Presentation</button>
+    <button class="stop-btn" onclick="stopSpeech()">■ Stop</button>
 
-<form action="/analyze" method="POST" onsubmit="setText()">
-    <input type="hidden" name="text" id="hiddenText">
-    <button type="submit">Analyze</button>
-</form>
+    <br>
 
-{% if done %}
-<div class="result">
-<hr>
+    <!-- ANALYZE -->
+    <form action="/analyze" method="POST" onsubmit="setText()">
+        <input type="hidden" name="text" id="hiddenText">
+        <button class="analyze-btn">Analyze</button>
+    </form>
 
-<h2>📊 Results</h2>
+    <!-- RESULTS -->
+    {% if done %}
+    <div class="results">
+        <hr>
+        <h3>📊 Results</h3>
 
-<p><b>Spoken:</b> {{ spoken_text }}</p>
-<p>Accuracy: {{ accuracy }}%</p>
-<p>Fillers: {{ fillers }}</p>
-<p>Speed: {{ wpm }} WPM</p>
-<p>Pauses: {{ pauses }}</p>
+        <p><b>Spoken:</b> {{ spoken }}</p>
+        <p><b>Accuracy:</b> {{ accuracy }}%</p>
+        <p><b>Fillers:</b> {{ fillers }}</p>
+        <p><b>Speed:</b> {{ wpm }} WPM</p>
+        <p><b>Pauses:</b> {{ pauses }}</p>
 
-<h3>🧠 AI Feedback</h3>
-<ul>
-{% for f in feedback %}
-<li>{{ f }}</li>
-{% endfor %}
-</ul>
+        <h3>🧠 AI Feedback</h3>
+        <ul>
+            {% for f in feedback %}
+            <li>{{ f }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
-</div>
-{% endif %}
+    <!-- ERROR -->
+    {% if error %}
+        <p style="color:red">{{ error }}</p>
+    {% endif %}
 
 </div>
 </div>
 
 <script>
 let recognition;
-let finalTranscript = "";
 
 function startSpeech() {
     recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.continuous = true;
 
     recognition.onresult = function(event) {
-        finalTranscript = "";
+        let transcript = "";
         for (let i = 0; i < event.results.length; i++) {
-            finalTranscript += event.results[i][0].transcript + " ";
+            transcript += event.results[i][0].transcript;
         }
-        document.getElementById("speechText").value = finalTranscript;
+        document.getElementById("speechText").value = transcript;
     };
 
     recognition.start();
 }
 
 function stopSpeech() {
-    recognition.stop();
+    if (recognition) {
+        recognition.stop();
+    }
 }
 
 function setText() {
