@@ -1,69 +1,160 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dashboard</title>
+    <title>TalkTrack Dashboard</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+        }
+
+        h2 {
+            text-align: center;
+            padding-top: 20px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.08);
+            padding: 30px;
+            border-radius: 15px;
+            width: 420px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        input[type="file"] {
+            margin-bottom: 10px;
+            color: white;
+        }
+
+        textarea {
+            width: 100%;
+            height: 90px;
+            border-radius: 10px;
+            border: none;
+            padding: 10px;
+            margin-top: 10px;
+            resize: none;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 8px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .upload {
+            background: #4fc3f7;
+            color: black;
+        }
+
+        .start {
+            background: #29b6f6;
+            color: black;
+        }
+
+        .stop {
+            background: #ef5350;
+            color: white;
+        }
+
+        .results {
+            margin-top: 20px;
+            text-align: left;
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+    </style>
 </head>
 
-<body style="text-align:center; background:#0f172a; color:white; padding:40px;">
+<body>
 
-<h2>TalkTrack Dashboard</h2>
+<h2>🎤 TalkTrack Dashboard</h2>
 
-<!-- Upload PPT -->
-<form action="/upload" method="POST" enctype="multipart/form-data">
-    <input type="file" name="ppt" required>
-    <button type="submit">Upload PPT</button>
-</form>
+<div class="container">
+<div class="card">
 
-<br>
+    <!-- Upload -->
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="ppt" required><br>
+        <button class="upload">Upload PPT</button>
+    </form>
 
-<!-- Speech box -->
-<textarea id="speechText" rows="5" cols="50" placeholder="Speak here..."></textarea>
+    <!-- Speech -->
+    <textarea id="speechText" placeholder="Speak here..."></textarea>
 
-<br><br>
+    <br>
 
-<button onclick="startSpeech()">Start</button>
-<button onclick="stopSpeech()">Stop</button>
+    <button class="start" onclick="startSpeech()">▶ Start</button>
+    <button class="stop" onclick="stopSpeech()">■ Stop</button>
 
-<!-- Hidden form -->
-<form id="analyzeForm" action="/analyze" method="POST">
-    <input type="hidden" name="text" id="hiddenText">
-</form>
+    <!-- Hidden form -->
+    <form id="form" action="/analyze" method="POST">
+        <input type="hidden" name="text" id="hiddenText">
+    </form>
 
-<hr>
+    <!-- Error -->
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
 
-<!-- ERROR -->
-{% if error %}
-<p style="color:red;">{{ error }}</p>
-{% endif %}
+    <!-- Results -->
+    {% if spoken %}
+    <div class="results">
+        <h3>📊 Results</h3>
 
-<!-- RESULTS -->
-{% if spoken %}
-<h3>Results</h3>
-<p><b>Spoken:</b> {{ spoken }}</p>
-<p><b>Accuracy:</b> {{ accuracy }}%</p>
-<p><b>Fillers:</b> {{ fillers }}</p>
-<p><b>Speed:</b> {{ wpm }} WPM</p>
-<p><b>Pauses:</b> {{ pauses }}</p>
+        <p><b>Spoken:</b> {{ spoken }}</p>
+        <p><b>Accuracy:</b> {{ accuracy }}%</p>
+        <p><b>Fillers:</b> {{ fillers }}</p>
+        <p><b>Speed:</b> {{ wpm }} WPM</p>
+        <p><b>Pauses:</b> {{ pauses }}</p>
 
-<h3>AI Feedback</h3>
-<ul>
-    {% for f in feedback %}
-    <li>{{ f }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
+        <h4>🧠 AI Feedback</h4>
+        <ul>
+        {% for f in feedback %}
+            <li>{{ f }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
+</div>
+</div>
+
+<!-- JS -->
 <script>
 let recognition;
 
-function startSpeech() {
+function startSpeech(){
     recognition = new webkitSpeechRecognition();
     recognition.continuous = true;
 
-    recognition.onresult = function(event) {
+    recognition.onresult = function(e){
         let text = "";
-        for (let i = 0; i < event.results.length; i++) {
-            text += event.results[i][0].transcript;
+        for(let i=0;i<e.results.length;i++){
+            text += e.results[i][0].transcript;
         }
         document.getElementById("speechText").value = text;
     };
@@ -71,13 +162,15 @@ function startSpeech() {
     recognition.start();
 }
 
-function stopSpeech() {
+function stopSpeech(){
     recognition.stop();
 
-    document.getElementById("hiddenText").value =
-        document.getElementById("speechText").value;
+    setTimeout(()=>{
+        document.getElementById("hiddenText").value =
+            document.getElementById("speechText").value;
 
-    document.getElementById("analyzeForm").submit();
+        document.getElementById("form").submit();
+    }, 500);
 }
 </script>
 
