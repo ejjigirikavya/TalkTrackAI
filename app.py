@@ -17,15 +17,26 @@ def extract_ppt_text(file):
 
 # -------------------- ACCURACY --------------------
 def calculate_accuracy(ppt_text, spoken_text):
+    if not ppt_text or not spoken_text:
+        return 0
+
+    # 1. Sequence similarity (overall)
+    seq_score = difflib.SequenceMatcher(None, ppt_text, spoken_text).ratio()
+
+    # 2. Word overlap
     ppt_words = set(ppt_text.split())
     spoken_words = set(spoken_text.split())
 
     if len(ppt_words) == 0:
-        return 0
+        word_score = 0
+    else:
+        common_words = ppt_words.intersection(spoken_words)
+        word_score = len(common_words) / len(ppt_words)
 
-    common = ppt_words.intersection(spoken_words)
+    # 3. Combine both (weighted)
+    final_score = (0.6 * seq_score) + (0.4 * word_score)
 
-    return round((len(common) / len(ppt_words)) * 100, 2)
+    return round(final_score * 100, 2)
 # -------------------- FILLERS --------------------
 def count_fillers(text):
     fillers = ["um", "uh", "like", "you know", "basically", "and"]
