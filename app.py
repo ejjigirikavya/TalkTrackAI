@@ -70,9 +70,9 @@ def analyze():
     ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
 
     # -------- ACCURACY --------
-    if spoken_words and ppt_words:
-        match_count = sum(1 for word in spoken_words if word in ppt_words)
-        accuracy = (match_count / len(spoken_words)) * 100
+    
+    if spoken and ppt_text:
+        accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
     else:
         accuracy = 0
 
