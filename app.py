@@ -70,32 +70,21 @@ def analyze():
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # -------- CLEAN WORDS --------
-    spoken_words = re.findall(r'\b\w+\b', spoken)
-    ppt_words = re.findall(r'\b\w+\b', ppt_text)
-
-    # -------- ACCURACY --------
    
+    # -------- ACCURACY --------
+    
+    # CLEAN WORDS
+spoken_words = re.findall(r'\b\w+\b', spoken.lower())
+ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
 
-
-    if os.path.exists("uploaded.pptx"):
-        
+# ACCURACY (NEW)
+    if spoken_words:
+         match_count = sum(1 for word in spoken_words if word in ppt_words)
+         accuracy = (match_count / len(spoken_words)) * 100
+     else:
          
-        ppt_text = extract_ppt_text("uploaded.pptx")
-    else:
-        ppt_text = ""
-
-    if ppt_text:
-        accuracy = difflib.SequenceMatcher(
-            None,
-        spoken,
-        ppt_text
-    ).ratio() * 100
-    else:
-        accuracy = 0
-            
-        
-
+         accuracy = 0
+    
     # -------- FILLERS --------
     filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
     fillers = sum(1 for word in spoken_words if word in filler_list)
