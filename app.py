@@ -61,31 +61,39 @@ def upload():
 def analyze():
     global ppt_text
 
+    import re
+    import difflib
+
     spoken = request.form.get('text', '').lower()
 
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    import re
-
+    # -------- CLEAN WORDS --------
     spoken_words = re.findall(r'\b\w+\b', spoken)
     ppt_words = re.findall(r'\b\w+\b', ppt_text)
 
-    import difflib
+    # -------- ACCURACY --------
+    if ppt_words:
+        accuracy = difflib.SequenceMatcher(
+            None,
+            " ".join(spoken_words),
+            " ".join(ppt_words)
+        ).ratio() * 100
+    else:
+        accuracy = 0
 
-accuracy = difflib.SequenceMatcher(
-    None,
-    " ".join(spoken_words),
-    " ".join(ppt_words)
-).ratio() * 100
-
-    filler_list = ["um", "uh", "like", "basically", "actually", "so"]
+    # -------- FILLERS --------
+    filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
     fillers = sum(1 for word in spoken_words if word in filler_list)
 
+    # -------- PAUSES --------
     pauses = len(spoken_words) // 7
 
-    wpm = len(spoken_words)   # ✅ FIXED LINE
+    # -------- SPEED --------
+    wpm = len(spoken_words)
 
+    # -------- FEEDBACK --------
     feedback = []
 
     if accuracy < 40:
