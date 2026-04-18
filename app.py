@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for
 from pptx import Presentation
 import difflib
 import re
-import os
 
 app = Flask(__name__)
 
@@ -30,14 +29,6 @@ def login():
     return render_template('index.html')
 
 
-# ---------- SIGNUP ----------
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        return redirect(url_for('login'))
-    return render_template('signup.html')
-
-
 # ---------- DASHBOARD ----------
 @app.route('/dashboard')
 def dashboard():
@@ -58,26 +49,28 @@ def upload():
 
 
 # ---------- ANALYZE ----------
+@app.route('/analyze', methods=['POST'])
 def analyze():
     global ppt_text
 
     spoken = request.form.get('text', '').lower()
 
-    print("PPT TEXT:", ppt_text[:100])
-    print("SPOKEN:", spoken[:100])
-
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    if not ppt_text:
-        return render_template('dashboard.html', error="Upload PPT first")
+    # -------- CLEAN WORDS --------
+    spoken_words = re.findall(r'\b\w+\b', spoken)
+    ppt_words = set(re.findall(r'\b\w+\b', ppt_text))
 
     # -------- ACCURACY --------
-    accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
+    if spoken_words and ppt_words:
+        match_count = sum(1 for word in spoken_words if word in ppt_words)
+        accuracy = (match_count / len(spoken_words)) * 100
+    else:
+        accuracy = 0
 
     # -------- FILLERS --------
-    filler_list = ["um", "uh", "like", "basically", "actually"]
-    spoken_words = re.findall(r'\b\w+\b', spoken)
+    filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
     fillers = sum(1 for word in spoken_words if word in filler_list)
 
     # -------- PAUSES --------
@@ -114,3 +107,7 @@ def analyze():
         wpm=wpm,
         feedback=feedback
     )
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
