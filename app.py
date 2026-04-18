@@ -88,7 +88,7 @@ fillers = sum(1 for word in spoken_words if word in filler_list)
 # ---------- PAUSES (ESTIMATION) ----------
 pauses = len(spoken_words) // 7
     # Speed
-    wpm = len(spoken.split())
+wpm = len(spoken.split())
 
     # Feedback
     feedback = []
