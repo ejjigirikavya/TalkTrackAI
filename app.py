@@ -58,35 +58,29 @@ def upload():
 
 
 # ---------- ANALYZE ----------
+# ---------- ANALYZE ----------
 @app.route('/analyze', methods=['POST'])
 def analyze():
     global ppt_text
-
-    import re
-    import difflib
 
     spoken = request.form.get('text', '').lower()
 
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-   
-    # -------- ACCURACY --------
-    
-    # CLEAN WORDS
-spoken_words = re.findall(r'\b\w+\b', spoken.lower())
-ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
+    # -------- CLEAN WORDS --------
+    spoken_words = re.findall(r'\b\w+\b', spoken.lower())
+    ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
 
-# ACCURACY (NEW)
-    if spoken_words:
-         match_count = sum(1 for word in spoken_words if word in ppt_words)
-         accuracy = (match_count / len(spoken_words)) * 100
-     else:
-         
-         accuracy = 0
-    
+    # -------- ACCURACY --------
+    if spoken_words and ppt_words:
+        match_count = sum(1 for word in spoken_words if word in ppt_words)
+        accuracy = (match_count / len(spoken_words)) * 100
+    else:
+        accuracy = 0
+
     # -------- FILLERS --------
-    filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
+    filler_list = ["um", "uh", "like", "basically", "actually"]
     fillers = sum(1 for word in spoken_words if word in filler_list)
 
     # -------- PAUSES --------
