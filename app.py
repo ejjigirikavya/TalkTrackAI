@@ -38,29 +38,36 @@ def dashboard():
 # ---------- UPLOAD ----------
 @app.route('/upload', methods=['POST'])
 def upload():
-    global ppt_text
-
     file = request.files.get('ppt')
 
     if file:
-        ppt_text = extract_ppt_text(file)
+        file.save("uploaded.pptx")   # ✅ SAVE FILE permanently
 
     return redirect(url_for('dashboard'))
 
 
 # ---------- ANALYZE ----------
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    global ppt_text
+    import os
+
+    # ✅ Load PPT properly
+    if os.path.exists("uploaded.pptx"):
+        ppt_text = extract_ppt_text("uploaded.pptx")
+    else:
+        ppt_text = ""
 
     spoken = request.form.get('text', '').lower()
+    print("PPT TEXT:", ppt_text[:200])
+    print("SPOKEN:", spoken[:200])
 
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
     # -------- CLEAN WORDS --------
-    spoken_words = re.findall(r'\b\w+\b', spoken)
-    ppt_words = set(re.findall(r'\b\w+\b', ppt_text))
+    spoken_words = re.findall(r'\b\w+\b', spoken.lower())
+    ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
 
     # -------- ACCURACY --------
     if spoken_words and ppt_words:
