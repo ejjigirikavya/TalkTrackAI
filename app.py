@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for
 from pptx import Presentation
 import difflib
 import re
+import os
 
 app = Flask(__name__)
 
@@ -74,14 +75,26 @@ def analyze():
     ppt_words = re.findall(r'\b\w+\b', ppt_text)
 
     # -------- ACCURACY --------
-    if ppt_words:
+   
+
+
+    if os.path.exists("uploaded.pptx"):
+        
+         
+        ppt_text = extract_ppt_text("uploaded.pptx")
+    else:
+        ppt_text = ""
+
+    if ppt_text:
         accuracy = difflib.SequenceMatcher(
             None,
-            " ".join(spoken_words),
-            " ".join(ppt_words)
-        ).ratio() * 100
+        spoken,
+        ppt_text
+    ).ratio() * 100
     else:
         accuracy = 0
+            
+        
 
     # -------- FILLERS --------
     filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
