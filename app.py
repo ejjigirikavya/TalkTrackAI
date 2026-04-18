@@ -66,31 +66,21 @@ def analyze():
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-   # ---------- CLEAN WORDS ----------
-spoken_words = re.findall(r'\b\w+\b', spoken)
-ppt_words = re.findall(r'\b\w+\b', ppt_text)
+    import re
 
-# ---------- ACCURACY (WORD MATCH BASED) ----------
-common_words = set(spoken_words) & set(ppt_words)
+    spoken_words = re.findall(r'\b\w+\b', spoken)
+    ppt_words = re.findall(r'\b\w+\b', ppt_text)
 
-if spoken_words:
-    accuracy = (len(common_words) / len(spoken_words)) * 100
-else:
-    accuracy = 0
+    common_words = set(spoken_words) & set(ppt_words)
+    accuracy = (len(common_words) / len(spoken_words)) * 100 if spoken_words else 0
 
+    filler_list = ["um", "uh", "like", "basically", "actually", "so"]
+    fillers = sum(1 for word in spoken_words if word in filler_list)
 
-# ---------- FILLER WORDS ----------
-filler_list = ["um", "uh", "like", "basically", "actually", "so"]
+    pauses = len(spoken_words) // 7
 
-fillers = sum(1 for word in spoken_words if word in filler_list)
+    wpm = len(spoken_words)   # ✅ FIXED LINE
 
-
-# ---------- PAUSES (ESTIMATION) ----------
-pauses = len(spoken_words) // 7
-    # Speed
-wpm = len(spoken.split())
-
-    # Feedback
     feedback = []
 
     if accuracy < 40:
@@ -118,6 +108,3 @@ wpm = len(spoken.split())
         wpm=wpm,
         feedback=feedback
     )
-
-
-
