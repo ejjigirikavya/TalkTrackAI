@@ -71,8 +71,13 @@ def analyze():
     spoken_words = re.findall(r'\b\w+\b', spoken)
     ppt_words = re.findall(r'\b\w+\b', ppt_text)
 
-    common_words = set(spoken_words) & set(ppt_words)
-    accuracy = (len(common_words) / len(spoken_words)) * 100 if spoken_words else 0
+    import difflib
+
+accuracy = difflib.SequenceMatcher(
+    None,
+    " ".join(spoken_words),
+    " ".join(ppt_words)
+).ratio() * 100
 
     filler_list = ["um", "uh", "like", "basically", "actually", "so"]
     fillers = sum(1 for word in spoken_words if word in filler_list)
