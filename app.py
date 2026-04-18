@@ -58,29 +58,26 @@ def upload():
 
 
 # ---------- ANALYZE ----------
-# ---------- ANALYZE ----------
-@app.route('/analyze', methods=['POST'])
 def analyze():
     global ppt_text
 
     spoken = request.form.get('text', '').lower()
 
+    print("PPT TEXT:", ppt_text[:100])
+    print("SPOKEN:", spoken[:100])
+
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # -------- CLEAN WORDS --------
-    spoken_words = re.findall(r'\b\w+\b', spoken.lower())
-    ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
+    if not ppt_text:
+        return render_template('dashboard.html', error="Upload PPT first")
 
     # -------- ACCURACY --------
-    if spoken_words and ppt_words:
-        match_count = sum(1 for word in spoken_words if word in ppt_words)
-        accuracy = (match_count / len(spoken_words)) * 100
-    else:
-        accuracy = 0
+    accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
 
     # -------- FILLERS --------
     filler_list = ["um", "uh", "like", "basically", "actually"]
+    spoken_words = re.findall(r'\b\w+\b', spoken)
     fillers = sum(1 for word in spoken_words if word in filler_list)
 
     # -------- PAUSES --------
