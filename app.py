@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from pptx import Presentation
 import difflib
-import re
 
 app = Flask(__name__)
 
@@ -66,22 +65,19 @@ def analyze():
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # ---------- ACCURACY (IMPROVED) ----------
-spoken_words = re.findall(r'\b\w+\b', spoken)
-ppt_words = re.findall(r'\b\w+\b', ppt_text)
+    # Accuracy
+    if ppt_text:
+        accuracy = difflib.SequenceMatcher(None, spoken, ppt_text).ratio() * 100
+    else:
+        accuracy = 0
 
-if spoken_words:
-    match_count = sum(1 for word in spoken_words if word in ppt_words)
-    accuracy = (match_count / len(spoken_words)) * 100
-else:
-    accuracy = 0
+    # Filler words
+    filler_list = ["um", "uh", "like", "you know", "basically"]
+    fillers = sum(spoken.count(word) for word in filler_list)
 
-# ---------- FILLERS (IMPROVED) ----------
-filler_list = ["um", "uh", "like", "basically", "actually", "so"]
-fillers = sum(1 for word in spoken_words if word in filler_list)
+    # Pauses
+    pauses = spoken.count("...")
 
-# ---------- PAUSES (ESTIMATED) ----------
-pauses = len(spoken_words) // 8
     # Speed
     wpm = len(spoken.split())
 
