@@ -1,176 +1,167 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TalkTrack Dashboard</title>
+    <title>TalkTrackAI</title>
 
     <style>
-        body {
+        * {
             margin: 0;
-            font-family: Arial;
-            background: linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
             color: white;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
         }
 
-        .card {
-            width: 420px;
+        .container {
+            width: 700px;
             padding: 25px;
-            border-radius: 15px;
-            background: rgba(255,255,255,0.08);
-            text-align: center;
-            box-shadow: 0 0 20px rgba(0,0,0,0.4);
         }
 
         h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        /* Glass Card */
+        .card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
             margin-bottom: 20px;
         }
 
         textarea {
             width: 100%;
-            height: 90px;
-            border-radius: 10px;
+            height: 120px;
+            border-radius: 12px;
             border: none;
-            padding: 10px;
-            margin-top: 10px;
+            padding: 12px;
+            font-size: 16px;
+            outline: none;
             resize: none;
         }
 
-        button {
-            padding: 10px 15px;
-            margin: 5px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
         }
 
-        .upload { background: #38bdf8; color: black; }
-        .start { background: #22c55e; }
-        .stop { background: #ef4444; }
-
-        .results {
-            margin-top: 20px;
-            text-align: left;
-            background: rgba(255,255,255,0.08);
-            padding: 15px;
+        .btn {
+            padding: 10px 22px;
             border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
         }
 
-        ul {
-            padding-left: 20px;
+        .start {
+            background: #22c55e;
+        }
+
+        .start:hover {
+            background: #16a34a;
+            transform: scale(1.05);
+        }
+
+        .stop {
+            background: #ef4444;
+        }
+
+        .stop:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+
+        .results p {
+            margin: 6px 0;
+        }
+
+        .metric {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .feedback {
+            margin-top: 15px;
+        }
+
+        .feedback li {
+            margin-left: 20px;
+            margin-top: 5px;
         }
 
         .error {
-            color: red;
+            color: #f87171;
+            text-align: center;
+            margin-bottom: 10px;
         }
+
     </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="container">
 
-    <h2>🎤 TalkTrack Dashboard</h2>
+    <h2>🎤 TalkTrackAI</h2>
 
-    <!-- Upload PPT -->
-    <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="ppt">
-        <br>
-        <button class="upload">Upload PPT</button>
-    </form>
-
-    <!-- Speech -->
-    <textarea id="speechText" placeholder="Speak here..."></textarea>
-
-    <br>
-
-    <!-- Buttons -->
-    <button class="start" onclick="startSpeech()">▶ Start</button>
-    <button class="stop" onclick="stopSpeech()">■ Stop</button>
-
-    <!-- Hidden Form -->
-    <form id="form" action="/analyze" method="POST">
-        <input type="hidden" name="text" id="hiddenText">
-    </form>
-
-    <!-- Error -->
+    <!-- ERROR -->
     {% if error %}
-        <p class="error">{{error}}</p>
+    <div class="error">{{ error }}</div>
     {% endif %}
 
-    <!-- Results -->
+    <!-- INPUT CARD -->
+    <div class="card">
+        <form action="/analyze" method="POST">
+
+            <textarea name="text" placeholder="Speak here..."></textarea>
+
+            <div class="btn-group">
+                <button type="button" class="btn start">▶ Start</button>
+                <button type="submit" class="btn stop">■ Stop</button>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- RESULTS CARD -->
     {% if spoken %}
-    <div class="results">
-        <h3>📊 Results</h3>
+    <div class="card results">
 
-        <p><b>Spoken:</b> {{spoken}}</p>
-        <p><b>Accuracy:</b> {{accuracy}}%</p>
-        <p><b>Filler Words:</b> {{fillers}}</p>
-        <p><b>Pauses:</b> {{pauses}}</p>
-        <p><b>Speed:</b> {{wpm}} WPM</p>
+        <p><b>📝 Spoken:</b> {{ spoken }}</p>
 
-        <!-- 🤖 AI FEEDBACK -->
-        <h3>🤖 AI Feedback</h3>
-        <ul>
-        {% for f in feedback %}
-            <li>{{f}}</li>
-        {% endfor %}
-        </ul>
+        <div class="metric">🎯 Accuracy: {{ accuracy }}%</div>
+        <div class="metric">🗣 Filler Words: {{ fillers }}</div>
+        <div class="metric">⏸ Pauses: {{ pauses }}</div>
+        <div class="metric">⚡ Speed: {{ wpm }} WPM</div>
+
+        <div class="feedback">
+            <b>🤖 AI Feedback</b>
+            <ul>
+                {% for f in feedback %}
+                <li>{{ f }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
     </div>
     {% endif %}
 
 </div>
-
-<script>
-let recognition;
-let finalText = "";
-
-function startSpeech(){
-    recognition = new webkitSpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    finalText = "";
-
-    recognition.onresult = function(e){
-        let interim = "";
-
-        for(let i = e.resultIndex; i < e.results.length; i++){
-            let t = e.results[i][0].transcript;
-
-            if(e.results[i].isFinal){
-                finalText += t + " ";
-            } else {
-                interim += t;
-            }
-        }
-
-        document.getElementById("speechText").value = finalText + interim;
-    };
-
-    recognition.start();
-}
-
-function stopSpeech(){
-    recognition.stop();
-
-    setTimeout(()=>{
-        let text = document.getElementById("speechText").value;
-
-        if(text.trim() === ""){
-            alert("No speech detected");
-            return;
-        }
-
-        document.getElementById("hiddenText").value = text;
-
-        document.getElementById("form").submit();
-    }, 1000);
-}
-</script>
 
 </body>
 </html>
