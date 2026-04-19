@@ -65,13 +65,15 @@ def analyze():
     else:
         ppt_text = ""
 
-    spoken = request.form.get('text', '').lower()
+    spoken = request.form.get('text', '')
 
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # WORD LIST (for fillers, pauses, speed)
-    spoken_list = re.findall(r'\b\w+\b', spoken.lower())
+    spoken = spoken.lower()
+
+    # WORD LIST
+    spoken_list = re.findall(r'\b\w+\b', spoken)
 
     # FILLERS
     filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
@@ -83,13 +85,13 @@ def analyze():
     # SPEED
     wpm = len(spoken_list)
 
-    # FEEDBACK
+    # FEEDBACK (FIXED)
     feedback = []
 
-    if accuracy < 40:
-        feedback.append("Follow PPT more closely")
+    if len(spoken_list) < 20:
+        feedback.append("Speak more content")
     else:
-        feedback.append("Good alignment")
+        feedback.append("Good speaking length")
 
     if fillers > 3:
         feedback.append("Reduce filler words")
@@ -105,7 +107,6 @@ def analyze():
     return render_template(
         'dashboard.html',
         spoken=spoken,
-       ## accuracy=round(accuracy, 2),
         fillers=fillers,
         pauses=pauses,
         wpm=wpm,
