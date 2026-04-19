@@ -105,7 +105,7 @@ def analyze():
     return render_template(
         'dashboard.html',
         spoken=spoken,
-        accuracy=round(accuracy, 2),
+       ## accuracy=round(accuracy, 2),
         fillers=fillers,
         pauses=pauses,
         wpm=wpm,
