@@ -114,5 +114,5 @@ def analyze():
         wpm=wpm,
         feedback=feedback
     )
-    if _name_ == "_main_":
-    app.run(debug=True)
+    if _name_ == "_main_": 
+        app.run(debug=True)
