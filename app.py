@@ -65,79 +65,9 @@ def analyze():
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # -------- CLEAN WORDS --------
-    spoken_words = re.findall(r'\b\w+\b', spoken.lower())
-    ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
-
     # -------- ACCURACY --------
+
     
-    from flask import Flask, render_template, request, redirect, url_for
-from pptx import Presentation
-import difflib
-import re
-
-app = Flask(__name__)
-
-ppt_text = ""
-
-
-# ---------- EXTRACT PPT ----------
-def extract_ppt_text(file):
-    prs = Presentation(file)
-    text = ""
-
-    for slide in prs.slides:
-        for shape in slide.shapes:
-            if hasattr(shape, "text"):
-                text += shape.text + " "
-
-    return text.lower()
-
-
-# ---------- LOGIN ----------
-@app.route('/', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        return redirect(url_for('dashboard'))
-    return render_template('index.html')
-
-
-# ---------- DASHBOARD ----------
-@app.route('/dashboard')
-def dashboard():
-    return render_template('dashboard.html')
-
-
-# ---------- UPLOAD ----------
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files.get('ppt')
-
-    if file:
-        file.save("uploaded.pptx")   # ✅ SAVE FILE permanently
-
-    return redirect(url_for('dashboard'))
-
-
-# ---------- ANALYZE ----------
-
-@app.route('/analyze', methods=['POST'])
-def analyze():
-    import os
-
-    # ✅ Load PPT properly
-    if os.path.exists("uploaded.pptx"):
-        ppt_text = extract_ppt_text("uploaded.pptx")
-    else:
-        ppt_text = ""
-
-    spoken = request.form.get('text', '').lower()
-    print("PPT TEXT:", ppt_text[:200])
-    print("SPOKEN:", spoken[:200])
-
-    if spoken.strip() == "":
-        return render_template('dashboard.html', error="No speech detected")
-
     # -------- CLEAN WORDS --------
    
 
@@ -146,11 +76,11 @@ def analyze():
 spoken_words = set(re.findall(r'\b\w+\b', spoken.lower()))
 ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
 
-if spoken_words and ppt_words:
-    common_words = spoken_words.intersection(ppt_words)
-    accuracy = (len(common_words) / len(spoken_words)) * 100
-else:
-    accuracy = 0
+    if spoken_words and ppt_words:
+       common_words = spoken_words.intersection(ppt_words)
+       accuracy = (len(common_words) / len(spoken_words)) * 100
+    else:
+       accuracy = 0
     # -------- FILLERS --------
     filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
     fillers = sum(1 for word in spoken_words if word in filler_list)
