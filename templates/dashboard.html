@@ -121,7 +121,6 @@
         <h3>📊 Results</h3>
 
         <p><b>📝 Spoken:</b> {{spoken}}</p>
-        <p><b>🎯 Accuracy:</b> {{accuracy}}%</p>
         <p><b>🗣 Filler Words:</b> {{fillers}}</p>
         <p><b>⏸ Pauses:</b> {{pauses}}</p>
         <p><b>⚡ Speed:</b> {{wpm}} WPM</p>
@@ -143,9 +142,16 @@ let recognition;
 let finalText = "";
 
 function startSpeech(){
-    document.getElementById("speechText").value = ""; // clear old text
+    document.getElementById("speechText").value = "";
 
-    recognition = new webkitSpeechRecognition();
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(!SpeechRecognition){
+        alert("Speech recognition not supported in this browser");
+        return;
+    }
+
+    recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
 
@@ -168,24 +174,6 @@ function startSpeech(){
     };
 
     recognition.start();
-}
-
-function stopSpeech(){
-    if(recognition){
-        recognition.stop();
-    }
-
-    setTimeout(()=>{
-        let text = document.getElementById("speechText").value;
-
-        if(text.trim() === ""){
-            alert("No speech detected");
-            return;
-        }
-
-        document.getElementById("hiddenText").value = text;
-        document.getElementById("form").submit();
-    }, 800);
 }
 </script>
 
