@@ -47,51 +47,46 @@ def upload():
 
 
 # ---------- ANALYZE ----------
-
 @app.route('/analyze', methods=['POST'])
 def analyze():
     import os
 
-    # ✅ Load PPT properly
+    # LOAD PPT
     if os.path.exists("uploaded.pptx"):
         ppt_text = extract_ppt_text("uploaded.pptx")
     else:
         ppt_text = ""
 
     spoken = request.form.get('text', '').lower()
-    print("PPT TEXT:", ppt_text[:200])
-    print("SPOKEN:", spoken[:200])
 
     if spoken.strip() == "":
         return render_template('dashboard.html', error="No speech detected")
 
-    # -------- ACCURACY --------
+    # WORD LIST (for fillers, pauses, speed)
+    spoken_list = re.findall(r'\b\w+\b', spoken.lower())
 
-    
-    # -------- CLEAN WORDS --------
-   
+    # WORD SET (for accuracy)
+    spoken_set = set(spoken_list)
+    ppt_set = set(re.findall(r'\b\w+\b', ppt_text.lower()))
 
-    # -------- ACCURACY --------
-   # -------- ACCURACY (FIXED) --------
-spoken_words = set(re.findall(r'\b\w+\b', spoken.lower()))
-ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
-
-    if spoken_words and ppt_words:
-       common_words = spoken_words.intersection(ppt_words)
-       accuracy = (len(common_words) / len(spoken_words)) * 100
+    # ACCURACY
+    if spoken_set and ppt_set:
+        common = spoken_set.intersection(ppt_set)
+        accuracy = (len(common) / len(spoken_set)) * 100
     else:
-       accuracy = 0
-    # -------- FILLERS --------
+        accuracy = 0
+
+    # FILLERS
     filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
-    fillers = sum(1 for word in spoken_words if word in filler_list)
+    fillers = sum(1 for word in spoken_list if word in filler_list)
 
-    # -------- PAUSES --------
-    pauses = len(spoken_words) // 7
+    # PAUSES
+    pauses = len(spoken_list) // 7
 
-    # -------- SPEED --------
-    wpm = len(spoken_words)
+    # SPEED
+    wpm = len(spoken_list)
 
-    # -------- FEEDBACK --------
+    # FEEDBACK
     feedback = []
 
     if accuracy < 40:
@@ -119,7 +114,5 @@ ppt_words = set(re.findall(r'\b\w+\b', ppt_text.lower()))
         wpm=wpm,
         feedback=feedback
     )
-
-
-if __name__ == "__main__":
+    if _name_ == "_main_":
     app.run(debug=True)
