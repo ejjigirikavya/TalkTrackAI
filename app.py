@@ -70,11 +70,11 @@ def analyze():
     ppt_set = set(re.findall(r'\b\w+\b', ppt_text.lower()))
 
     # ACCURACY
-    if spoken_set and ppt_set:
-        common = spoken_set.intersection(ppt_set)
-        accuracy = (len(common) / len(spoken_set)) * 100
-    else:
-        accuracy = 0
+    #if spoken_set and ppt_set:
+        #common = spoken_set.intersection(ppt_set)
+        #accuracy = (len(common) / len(spoken_set)) * 100
+    #else:
+        #accuracy = 0
 
     # FILLERS
     filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
