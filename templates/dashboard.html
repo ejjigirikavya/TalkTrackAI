@@ -28,10 +28,6 @@
             margin-bottom: 15px;
         }
 
-        input[type="file"] {
-            margin: 10px 0;
-        }
-
         textarea {
             width: 100%;
             height: 100px;
@@ -91,17 +87,16 @@
         <button type="submit" class="upload">Upload PPT</button>
     </form>
 
-    <!-- Success Message -->
+    <!-- Messages -->
     {% if success %}
         <p class="success">{{success}}</p>
     {% endif %}
 
-    <!-- Error Message -->
     {% if error %}
         <p class="error">{{error}}</p>
     {% endif %}
 
-    <!-- Speech Text -->
+    <!-- Speech Box -->
     <textarea id="speechText" placeholder="Speak here..."></textarea>
 
     <br>
@@ -115,8 +110,8 @@
         <input type="hidden" name="text" id="hiddenText">
     </form>
 
-    <!-- Results -->
-    {% if spoken %}
+    <!-- ✅ RESULTS (FIXED CONDITION) -->
+    {% if spoken is not none %}
     <div class="results">
         <h3>📊 Results</h3>
 
@@ -144,14 +139,7 @@ let finalText = "";
 function startSpeech(){
     document.getElementById("speechText").value = "";
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if(!SpeechRecognition){
-        alert("Speech recognition not supported in this browser");
-        return;
-    }
-
-    recognition = new SpeechRecognition();
+    recognition = new webkitSpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
 
@@ -174,6 +162,25 @@ function startSpeech(){
     };
 
     recognition.start();
+}
+
+function stopSpeech(){
+    if(recognition){
+        recognition.stop();
+    }
+
+    setTimeout(()=>{
+        let text = document.getElementById("speechText").value;
+
+        if(text.trim() === ""){
+            alert("No speech detected");
+            return;
+        }
+
+        document.getElementById("hiddenText").value = text;
+        document.getElementById("form").submit();
+
+    }, 1500);  // ✅ IMPORTANT FIX
 }
 </script>
 
