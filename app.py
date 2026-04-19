@@ -65,17 +65,6 @@ def analyze():
     # WORD LIST (for fillers, pauses, speed)
     spoken_list = re.findall(r'\b\w+\b', spoken.lower())
 
-    # WORD SET (for accuracy)
-    spoken_set = set(spoken_list)
-    ppt_set = set(re.findall(r'\b\w+\b', ppt_text.lower()))
-
-    # ACCURACY
-    #if spoken_set and ppt_set:
-        #common = spoken_set.intersection(ppt_set)
-        #accuracy = (len(common) / len(spoken_set)) * 100
-    #else:
-        #accuracy = 0
-
     # FILLERS
     filler_list = ["um", "uh", "like", "basically", "actually", "so", "and", "but"]
     fillers = sum(1 for word in spoken_list if word in filler_list)
