@@ -27,6 +27,14 @@ def login():
     if request.method == 'POST':
         return redirect(url_for('dashboard'))
     return render_template('index.html')
+# ---------- SIGNUP ----------
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        # (optional) handle signup logic
+        return redirect(url_for('login'))
+
+    return render_template('signup.html')
 
 
 # ---------- DASHBOARD ----------
