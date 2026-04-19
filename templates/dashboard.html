@@ -82,16 +82,12 @@
 
     <!-- Upload PPT -->
     <form action="/upload" method="POST" enctype="multipart/form-data">
-        <input type="file" name="ppt" accept=".pptx" required>
+        <input type="file" name="ppt" accept=".pptx">
         <br>
         <button type="submit" class="upload">Upload PPT</button>
     </form>
 
     <!-- Messages -->
-    {% if success %}
-        <p class="success">{{success}}</p>
-    {% endif %}
-
     {% if error %}
         <p class="error">{{error}}</p>
     {% endif %}
@@ -110,8 +106,8 @@
         <input type="hidden" name="text" id="hiddenText">
     </form>
 
-    <!-- ✅ RESULTS (FIXED CONDITION) -->
-    {% if spoken is not none %}
+    <!-- ✅ RESULTS (SAFE CONDITION) -->
+    {% if spoken is defined %}
     <div class="results">
         <h3>📊 Results</h3>
 
@@ -120,7 +116,6 @@
         <p><b>⏸ Pauses:</b> {{pauses}}</p>
         <p><b>⚡ Speed:</b> {{wpm}} WPM</p>
 
-        <!-- AI Feedback -->
         <h3>🤖 AI Feedback</h3>
         <ul>
         {% for f in feedback %}
@@ -180,7 +175,7 @@ function stopSpeech(){
         document.getElementById("hiddenText").value = text;
         document.getElementById("form").submit();
 
-    }, 1500);  // ✅ IMPORTANT FIX
+    }, 1200);  // important delay
 }
 </script>
 
